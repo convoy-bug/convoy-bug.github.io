@@ -1,81 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-    >
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>Checkpoint</title>
+<title>Checkpoint</title>
 
-    <link rel="stylesheet" href="checkpoint.css" />
+<link rel="stylesheet" href="checkpoint.css" />
 
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 </head>
 
 <body>
 
-    <div class="container">
+<div class="container">
 
-        <picture>
-            <img src="iskamskrol_logo.png" alt="Iskamskrol Logo">
-        </picture>
+    <picture>
+        <img src="iskamskrol_logo.png" alt="Iskamskrol Logo">
+    </picture>
 
-        <h1>Iskamskrol</h1>
+    <h1>Iskamskrol</h1>
 
-        <p>We hope you've been enjoying your experience</p>
-        <p>But before we can continue we'd like to ask for some feedback</p>
-        <p>Do you want to continue scrolling?</p>
+    <p>We hope you've been enjoying your experience</p>
+    <p>But before we can continue we'd like to ask for some feedback</p>
+    <p>Do you want to continue scrolling?</p>
 
-        <button id="stopBtn">
-            Stop
-        </button>
+    <button id="stopBtn">Stop</button>
+    <button id="continueBtn">Continue</button>
 
-        <button id="continueBtn">
-            Continue
-        </button>
+</div>
 
-    </div>
+<script>
 
-    <script>
+/* checkpoint counter (unchanged but safe) */
+let checkpointCount =
+    parseInt(localStorage.getItem("checkpointCount")) || 0;
 
-        // COUNT checkpoint visits
-        let checkpointCount =
-            parseInt(
-                localStorage.getItem("checkpointCount")
-            ) || 0;
+checkpointCount++;
 
-        checkpointCount++;
+localStorage.setItem("checkpointCount", checkpointCount);
 
-        localStorage.setItem(
-            "checkpointCount",
-            checkpointCount
-        );
+/* STOP → RESULTS */
+document.getElementById("stopBtn").addEventListener("click", () => {
 
-        document
-            .getElementById("stopBtn")
-            .addEventListener("click", () => {
+    localStorage.setItem("resultType", "success");
+    localStorage.removeItem("resumeVideoIndex");
 
-                localStorage.setItem(
-                    "resultType",
-                    "success"
-                );
+    window.location.href = "results.html";
+});
 
-                window.location.href =
-                    "results.html";
-            });
+/* CONTINUE → BACK TO FEED */
+document.getElementById("continueBtn").addEventListener("click", () => {
 
-        document
-            .getElementById("continueBtn")
-            .addEventListener("click", () => {
+    /* IMPORTANT:
+       do NOT reset resumeVideoIndex
+       feed will auto-resume correctly */
+    window.location.href = "index.html";
+});
 
-                localStorage.setItem("isReturning", "1");
-                window.location.href = "index.html";
-            });
-
-    </script>
+</script>
 
 </body>
 </html>

@@ -167,8 +167,7 @@ function renderVideos(){
             webkit-playsinline
             preload="auto"
             muted
-        ></video
-        ';
+        ></video>`;
 
         appVideos.appendChild(el);
     });
@@ -177,7 +176,7 @@ renderVideos();
 
 function safePlay(video){
     if(!video) return;
-
+    video.muted = true;
     const p = video.play();
     if(p) p.catch(()=>{});
 }
@@ -347,8 +346,6 @@ document.querySelectorAll(".video")
 document.body.addEventListener("click",(e)=>{
     const video = e.target.closest(".video")?.querySelector("video");
     if(!video) return;
-
-    video.muted = !video.muted;
 
     if(video.paused){
         manuallyPaused=false;

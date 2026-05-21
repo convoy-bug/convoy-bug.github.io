@@ -18,6 +18,7 @@
             padding: 0;
             overscroll-behavior: none;
             -webkit-overflow-scrolling: touch;
+            overflow: hidden;
         }
 
         .app_videos {
@@ -44,6 +45,7 @@
         let currentVideoIndex = -1;
         let manuallyPaused = false;
         let scrollLocked = false;
+        let antiTriggered = false;
 
         const params = new URLSearchParams(window.location.search);
 
@@ -77,78 +79,19 @@
             .map(tag => TAGS[tag])
             .filter(Boolean);
 
-        const videoData = [ 
-            { src: "videos/1.mp4", tags: [1,4,3,14] }, 
-            { src: "videos/2.mp4", tags: [1,2,14] }, 
-            { src: "videos/3.mp4", tags: [2,5] }, 
-            { src: "videos/4.mp4", tags: [1,4,3] }, 
-            { src: "videos/5.mp4", tags: [3,8] }, 
-            { src: "videos/6.mp4", tags: [8,9] }, 
-            { src: "videos/7.mp4", tags: [1,3,14] }, 
-            { src: "videos/8.mp4", tags: [1,6,5] }, 
-            { src: "videos/9.mp4", tags: [2,5] }, 
-            { src: "videos/10.mp4", tags: [12,1,4,14] }, 
-            { src: "videos/11.mp4", tags: [1,4,2] }, 
-            { src: "videos/12.mp4", tags: [1,4,3,14] }, 
-            { src: "videos/13.mp4", tags: [12,3,1,14] }, 
-            { src: "videos/14.mp4", tags: [12,1,2,14] }, 
-            { src: "videos/15.mp4", tags: [1,4,11,8] }, 
-            { src: "videos/16.mp4", tags: [2,7,6] }, 
-            { src: "videos/17.mp4", tags: [2,1,14] }, 
-            { src: "videos/18.mp4", tags: [1,12,14] }, 
-            { src: "videos/19.mp4", tags: [1,12,2,14] }, 
-            { src: "videos/20.mp4", tags: [2,5,14] }, 
-            { src: "videos/21.mp4", tags: [2,5,6,14] }, 
-            { src: "videos/22.mp4", tags: [6,2,1] }, 
-            { src: "videos/23.mp4", tags: [10,3,6,1] }, 
-            { src: "videos/24.mp4", tags: [6,2,7,10] }, 
-            { src: "videos/25.mp4", tags: [6,2,7,10] }, 
-            { src: "videos/26.mp4", tags: [6,7,4,14] }, 
-            { src: "videos/27.mp4", tags: [4,2,1] }, 
-            { src: "videos/28.mp4", tags: [6,2,1] }, 
-            { src: "videos/29.mp4", tags: [3,4,14] }, 
-            { src: "videos/30.mp4", tags: [6,7,3,14] }, 
-            { src: "videos/31.mp4", tags: [6,3,4] }, 
-            { src: "videos/32.mp4", tags: [6,4,1,14] }, 
-            { src: "videos/33.mp4", tags: [6,1,5] }, 
-            { src: "videos/34.mp4", tags: [4,1,2,14] }, 
-            { src: "videos/35.mp4", tags: [3,4] }, 
-            { src: "videos/36.mp4", tags: [3,4] }, 
-            { src: "videos/37.mp4", tags: [9,7,13] }, 
-            { src: "videos/38.mp4", tags: [9,7,3] }, 
-            { src: "videos/39.mp4", tags: [9,13] }, 
-            { src: "videos/40.mp4", tags: [11,12,8] }, 
-            { src: "videos/41.mp4", tags: [9,13,3] }, 
-            { src: "videos/42.mp4", tags: [9,3] }, 
-            { src: "videos/43.mp4", tags: [9,13] }, 
-            { src: "videos/44.mp4", tags: [9,5,14] }, 
-            { src: "videos/45.mp4", tags: [10,4,14] }, 
-            { src: "videos/46.mp4", tags: [10,3,5,14] }, 
-            { src: "videos/47.mp4", tags: [10,4,1,2] }, 
-            { src: "videos/48.mp4", tags: [10,4,1] }, 
-            { src: "videos/49.mp4", tags: [2,10,12,3] }, 
-            { src: "videos/50.mp4", tags: [10,9,13] }, 
-            { src: "videos/51.mp4", tags: [10,13] }, 
-            { src: "videos/52.mp4", tags: [7,6,5,14] }, 
-            { src: "videos/53.mp4", tags: [11,5,14] }, 
-            { src: "videos/54.mp4", tags: [11,5,3,14] }, 
-            { src: "videos/55.mp4", tags: [11,9] }, 
-            { src: "videos/56.mp4", tags: [11,13,9] }, 
-            { src: "videos/57.mp4", tags: [11,7] }, 
-            { src: "videos/58.mp4", tags: [11,7] }, 
-            { src: "videos/59.mp4", tags: [11,3] }, 
-            { src: "videos/60.mp4", tags: [6,3,4,14] }, 
-            { src: "videos/61.mp4", tags: [11,13,5] }, 
-            { src: "videos/62.mp4", tags: [13,3] }, 
-            { src: "videos/64.mp4", tags: [12,3] }, 
-            { src: "videos/65.mp4", tags: [12,10,8] }, 
-            { src: "videos/66.mp4", tags: [12,10,8] }, 
-            { src: "videos/67.mp4", tags: [12,10] }, 
-            { src: "videos/68.mp4", tags: [12,8] }, 
-            { src: "videos/69.mp4", tags: [12,3,8] }, 
-            { src: "videos/70.mp4", tags: [6,2,5] }, 
+        const videoData = [
+            { src: "videos/1.mp4", tags: [1,4,3,14] },
+            { src: "videos/2.mp4", tags: [1,2,14] },
+            { src: "videos/3.mp4", tags: [2,5] },
+            { src: "videos/4.mp4", tags: [1,4,3] },
+            { src: "videos/5.mp4", tags: [3,8] },
+            { src: "videos/6.mp4", tags: [8,9] },
+            { src: "videos/7.mp4", tags: [1,3,14] },
+            { src: "videos/8.mp4", tags: [1,6,5] },
+            { src: "videos/9.mp4", tags: [2,5] },
+            { src: "videos/10.mp4", tags: [12,1,4,14] }
         ];
-        
+
         const antiVideoData = [
             { src: "videos/anti/1.mp4" },
             { src: "videos/anti/2.mp4" },
@@ -202,13 +145,9 @@
 
             scrollLocked = true;
 
-            document.body.style.overflow = "hidden";
-
             setTimeout(() => {
 
                 scrollLocked = false;
-
-                document.body.style.overflow = "";
 
             }, duration);
         }
@@ -243,6 +182,7 @@
                         src="${video.src}"
                         loop
                         playsinline
+                        webkit-playsinline
                         preload="auto"
                     ></video>
 
@@ -300,6 +240,8 @@
 
             video.pause();
             video.muted = true;
+            video.setAttribute("playsinline", "");
+            video.setAttribute("webkit-playsinline", "");
         });
 
         function enablePlayback() {
@@ -362,7 +304,7 @@
 
                     if (targetVideo) {
 
-                        currentVideoIndex = -1;
+                        currentVideoIndex = savedIndex;
 
                         targetVideo.muted = false;
 
@@ -372,7 +314,7 @@
                             );
                     }
 
-                }, 100);
+                }, 300);
             }
         });
 
@@ -403,10 +345,14 @@
 
                         video.muted = false;
 
-                        video.play()
-                            .catch(err =>
+                        const playPromise = video.play();
+
+                        if (playPromise !== undefined) {
+
+                            playPromise.catch(err =>
                                 console.log(err)
                             );
+                        }
                     }
 
                 } else {
@@ -467,7 +413,6 @@
                         const isAnti =
                             mergedVideos[index]?.isAnti;
 
-                        // FIXED SECOND TO LAST DETECTION
                         const realVideosSeen =
                             mergedVideos
                                 .slice(0, index + 1)
@@ -477,9 +422,10 @@
                         const realVideoCount =
                             filteredVideos.length;
 
+                        // FINAL FAIL STATE
                         if (
                             realVideosSeen >=
-                            realVideoCount - 1
+                            realVideoCount
                         ) {
 
                             localStorage.removeItem(
@@ -497,88 +443,82 @@
                             return;
                         }
 
+                        // ANTI VIDEO LOGIC
                         if (
-    isAnti &&
-    !scrollLocked
-) {
+                            isAnti &&
+                            !scrollLocked &&
+                            !antiTriggered
+                        ) {
 
-    lockScroll(3000);
+                            antiTriggered = true;
 
-    // SAVE next resume position
-    localStorage.setItem(
-        "resumeVideoIndex",
-        index + 1
-    );
+                            lockScroll(3000);
 
-    const antiNumber =
-        mergedVideos
-            .slice(0, index + 1)
-            .filter(v => v.isAnti)
-            .length;
+                            localStorage.setItem(
+                                "resumeVideoIndex",
+                                index + 1
+                            );
 
-    // FORCE anti video playback on iOS
-    video.muted = false;
+                            const antiNumber =
+                                mergedVideos
+                                    .slice(0, index + 1)
+                                    .filter(v => v.isAnti)
+                                    .length;
 
-    video.play()
-        .then(() => {
+                            video.pause();
 
-            // wait before allowing redirect
-            setTimeout(() => {
+                            video.currentTime = 0;
 
-                const goNext = () => {
+                            video.muted = false;
 
-                    window.removeEventListener(
-                        "wheel",
-                        goNext
-                    );
+                            const promise =
+                                video.play();
 
-                    window.removeEventListener(
-                        "touchend",
-                        goNext
-                    );
+                            if (promise !== undefined) {
 
-                    if (antiNumber >= 3) {
+                                promise
+                                    .then(() => {
 
-                        localStorage.removeItem(
-                            "resumeVideoIndex"
-                        );
+                                        setTimeout(() => {
 
-                        localStorage.setItem(
-                            "resultType",
-                            "fail"
-                        );
+                                            if (
+                                                antiNumber >= 3
+                                            ) {
 
-                        window.location.href =
-                            "results.html";
+                                                localStorage.removeItem(
+                                                    "resumeVideoIndex"
+                                                );
 
-                    } else {
+                                                localStorage.setItem(
+                                                    "resultType",
+                                                    "fail"
+                                                );
 
-                        window.location.href =
-                            "checkpoint.html";
-                    }
-                };
+                                                window.location.href =
+                                                    "results.html";
 
-                // desktop
-                window.addEventListener(
-                    "wheel",
-                    goNext,
-                    { once: true }
-                );
+                                            } else {
 
-                // mobile
-                window.addEventListener(
-                    "touchend",
-                    goNext,
-                    { once: true }
-                );
+                                                window.location.href =
+                                                    "checkpoint.html";
+                                            }
 
-            }, 3000);
+                                        }, 3000);
 
-        })
-        .catch(err => {
-            console.log(err);
-        });
-}
+                                    })
+                                    .catch(err => {
+
+                                        console.log(err);
+
+                                        setTimeout(() => {
+
+                                            window.location.href =
+                                                "checkpoint.html";
+
+                                        }, 3000);
+                                    });
+                            }
+                        }
 
                     } else {
 
@@ -633,7 +573,83 @@
                     }
                 );
             });
-        
+
+        // FORCE ONE VIDEO PER SWIPE
+
+        let touchStartY = 0;
+        let touchEndY = 0;
+        let isSnapping = false;
+
+        const videoCards =
+            document.querySelectorAll(".video");
+
+        function snapToVideo(index) {
+
+            if (
+                index < 0 ||
+                index >= videoCards.length ||
+                isSnapping
+            ) return;
+
+            isSnapping = true;
+
+            videoCards[index].scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+
+            setTimeout(() => {
+
+                isSnapping = false;
+
+            }, 400);
+        }
+
+        appVideos.addEventListener(
+            "touchstart",
+            (e) => {
+
+                touchStartY =
+                    e.changedTouches[0].screenY;
+            },
+            { passive: true }
+        );
+
+        appVideos.addEventListener(
+            "touchend",
+            (e) => {
+
+                if (
+                    scrollLocked ||
+                    isSnapping
+                ) return;
+
+                touchEndY =
+                    e.changedTouches[0].screenY;
+
+                const swipeDistance =
+                    touchStartY - touchEndY;
+
+                if (
+                    Math.abs(swipeDistance) < 50
+                ) return;
+
+                if (swipeDistance > 0) {
+
+                    snapToVideo(
+                        currentVideoIndex + 1
+                    );
+
+                } else {
+
+                    snapToVideo(
+                        currentVideoIndex - 1
+                    );
+                }
+            },
+            { passive: true }
+        );
+
         window.addEventListener(
             "wheel",
             (e) => {

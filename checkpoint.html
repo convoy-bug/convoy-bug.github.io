@@ -33,16 +33,37 @@
 
 <script>
 
-/* checkpoint counter (unchanged but safe) */
+/* checkpoint counter */
 let checkpointCount =
     parseInt(localStorage.getItem("checkpointCount")) || 0;
 
 checkpointCount++;
 
-localStorage.setItem("checkpointCount", checkpointCount);
+localStorage.setItem(
+    "checkpointCount",
+    checkpointCount
+);
+
+/* DEBUG: videos viewed */
+const videosViewed =
+    parseInt(localStorage.getItem("videosScrolled")) || 0;
+
+console.log(
+    "[CHECKPOINT DEBUG]",
+    "Videos Viewed:",
+    videosViewed,
+    "| Checkpoints Reached:",
+    checkpointCount
+);
 
 /* STOP → RESULTS */
 document.getElementById("stopBtn").addEventListener("click", () => {
+
+    console.log(
+        "[STOP CLICKED]",
+        "Final Videos Viewed:",
+        videosViewed
+    );
 
     localStorage.setItem("resultType", "success");
     localStorage.removeItem("resumeVideoIndex");
@@ -53,9 +74,14 @@ document.getElementById("stopBtn").addEventListener("click", () => {
 /* CONTINUE → BACK TO FEED */
 document.getElementById("continueBtn").addEventListener("click", () => {
 
-    /* IMPORTANT:
-       do NOT reset resumeVideoIndex
-       feed will auto-resume correctly */
+    console.log(
+        "[CONTINUE CLICKED]",
+        "Resuming Feed At Index:",
+        localStorage.getItem("resumeVideoIndex"),
+        "| Videos Viewed:",
+        videosViewed
+    );
+
     window.location.href = "index.html";
 });
 

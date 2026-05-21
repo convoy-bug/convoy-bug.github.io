@@ -24,11 +24,11 @@ body {
     position: relative;
     height: 100vh;
     background-color: black;
-    overflow-y: scroll;
+    overflow: hidden;
     width: 100%;
     max-width: 400px;
     border-radius: 20px;
-    scroll-snap-type: y mandatory;
+    touch-action: pan-y;
 
     -ms-overflow-style: none;
     scrollbar-width: none;

@@ -9,7 +9,6 @@
 
 <title>TikTokClone</title>
 <link rel="stylesheet" href="video.css" />
-
 </head>
 
 <body>
@@ -27,6 +26,9 @@ const seenReal = new Set();
 
 /* prevents double-trigger issues on iOS */
 let activeFlowIndex = null;
+
+/* NEW: anti duplicate guard */
+let antiTriggeredIndex = null;
 
 const params = new URLSearchParams(window.location.search);
 const selectedTags = [];
@@ -151,9 +153,6 @@ function injectAntiVideos(videos, antiVideos, interval=8){
 const mergedVideos = injectAntiVideos(filteredVideos, antiVideoData, 8);
 const appVideos = document.getElementById("appVideos");
 
-/* ---------------------------
-   RENDER
-----------------------------*/
 function renderVideos(){
     mergedVideos.forEach((v,i)=>{
         const el=document.createElement("div");
@@ -175,23 +174,14 @@ function renderVideos(){
 }
 renderVideos();
 
-/* ---------------------------
-   IOS SAFE PLAY
-----------------------------*/
 function safePlay(video){
     if(!video) return;
-
     video.muted = true;
-
     const p = video.play();
-    if(p){
-        p.catch(()=>{});
-    }
+    if(p) p.catch(()=>{});
 }
 
-/* ---------------------------
-   RESTORE POSITION
-----------------------------*/
+/* RESTORE */
 window.addEventListener("load", () => {
 
     const savedIndex =
@@ -208,45 +198,30 @@ window.addEventListener("load", () => {
         target.scrollIntoView({behavior:"auto"});
         currentVideoIndex = startIndex;
 
-        /* rebuild counters */
         realIndexSeen = 0;
         seenReal.clear();
 
         for(let i=0;i<=startIndex;i++){
-
             if(mergedVideos[i] && !mergedVideos[i].isAnti){
-
                 seenReal.add(i);
                 realIndexSeen++;
             }
         }
 
-        localStorage.setItem(
-            "videosScrolled",
-            realIndexSeen
-        );
-
-        console.log(
-            "[RESTORE] Videos viewed:",
-            realIndexSeen
-        );
+        localStorage.setItem("videosScrolled", realIndexSeen);
+        console.log("[RESTORE] Videos viewed:", realIndexSeen);
     }
 });
 
-/* ---------------------------
-   ANTI FLOW
-----------------------------*/
+/* ANTI FLOW */
 function runAntiFlow(video,index){
 
-    if(scrollLocked) return;
     if(mergedVideos[index]?.isAnti !== true) return;
-
-    if(mergedVideos[index]?.isAnti === false){
-        return;
-    }
-
     if(activeFlowIndex === index) return;
+    if(antiTriggeredIndex === index) return; // NEW guard
+
     activeFlowIndex = index;
+    antiTriggeredIndex = index; // NEW
 
     scrollLocked = true;
 
@@ -256,39 +231,16 @@ function runAntiFlow(video,index){
 
     video.pause();
     video.currentTime = 0;
-
     safePlay(video);
 
-    localStorage.setItem(
-        "resumeVideoIndex",
-        index + 1
-    );
+    localStorage.setItem("antiActive", "1");
+    localStorage.setItem("antiIndex", index);
+    localStorage.setItem("antiCount", antiCount);
 
-    setTimeout(()=>{
-
-        scrollLocked = false;
-        activeFlowIndex = null;
-
-        if(antiCount >= 3){
-
-            localStorage.setItem(
-                "resultType",
-                "fail"
-            );
-
-            window.location.href="results.html";
-
-        } else {
-
-            window.location.href="checkpoint.html";
-        }
-
-    }, 3000);
+    console.log("[ANTI STARTED]", index);
 }
 
-/* ---------------------------
-   OBSERVER
-----------------------------*/
+/* OBSERVER */
 let lastIndex = -1;
 
 const observer = new IntersectionObserver(entries=>{
@@ -314,67 +266,76 @@ const observer = new IntersectionObserver(entries=>{
 
         const isAnti = mergedVideos[index]?.isAnti;
 
+        const wasAntiActive =
+            localStorage.getItem("antiActive") === "1";
+
+        const lastAntiIndex =
+            parseInt(localStorage.getItem("antiIndex") || "-1");
+
+        /* FIXED EXIT CONDITION */
+        if(!isAnti && wasAntiActive && index >= lastAntiIndex + 1){
+
+            console.log("[ANTI COMPLETED]");
+
+            localStorage.removeItem("antiActive");
+            scrollLocked = false;
+            activeFlowIndex = null;
+            antiTriggeredIndex = null;
+
+            const antiCount =
+                parseInt(localStorage.getItem("antiCount")) || 0;
+
+            localStorage.setItem("resumeVideoIndex", index);
+
+            if(antiCount >= 3){
+                localStorage.setItem("resultType","fail");
+                window.location.href="results.html";
+            } else {
+                window.location.href="checkpoint.html";
+            }
+
+            return;
+        }
+
         /* REAL VIDEO TRACKING */
         if(!isAnti){
 
-    if(!seenReal.has(index)){
-        seenReal.add(index);
-        realIndexSeen++;
+            if(!seenReal.has(index)){
+                seenReal.add(index);
+                realIndexSeen++;
 
-        localStorage.setItem(
-            "videosViewed",
-            realIndexSeen
-        );
+                localStorage.setItem("videosViewed", realIndexSeen);
 
-        console.log(
-            "[VIDEO VIEWED]",
-            "Real Videos Viewed:",
-            realIndexSeen
-        );
-    }
+                console.log("[VIDEO VIEWED]", realIndexSeen);
+            }
 
-    if(realIndexSeen >= filteredVideos.length){
-        localStorage.removeItem("resumeVideoIndex");
-        window.location.href="results.html";
-        return;
-    }
-}
-
-        if(isAnti && !scrollLocked){
-
-    console.log(
-        "[ANTI VIDEO PENDING]",
-        "Index:",
-        index
-    );
-
-    // prevent instant trigger during scroll momentum (iOS fix)
-    setTimeout(() => {
-
-        const cardNow =
-            document.querySelector(`.video[data-index="${index}"]`);
-
-        if(!cardNow) return;
-
-        const rect = cardNow.getBoundingClientRect();
-        const fullyCentered =
-            rect.top >= 0 &&
-            rect.top < window.innerHeight * 0.25;
-
-        // only trigger if STILL centered after delay
-        if(fullyCentered && !scrollLocked){
-
-            console.log(
-                "[ANTI VIDEO CONFIRMED]",
-                "Triggering flow:",
-                index
-            );
-
-            runAntiFlow(video, index);
+            if(realIndexSeen >= filteredVideos.length){
+                localStorage.removeItem("resumeVideoIndex");
+                window.location.href="results.html";
+                return;
+            }
         }
 
-    }, 250);
-}
+        if(isAnti && !scrollLocked && antiTriggeredIndex !== index){
+
+            setTimeout(()=>{
+
+                const cardNow =
+                    document.querySelector(`.video[data-index="${index}"]`);
+
+                if(!cardNow) return;
+
+                const rect = cardNow.getBoundingClientRect();
+                const fullyCentered =
+                    rect.top >= 0 &&
+                    rect.top < window.innerHeight * 0.25;
+
+                if(fullyCentered && !scrollLocked){
+                    runAntiFlow(video,index);
+                }
+
+            },250);
+        }
     });
 
 },{threshold:0.6});
@@ -382,38 +343,18 @@ const observer = new IntersectionObserver(entries=>{
 document.querySelectorAll(".video")
 .forEach(card=>observer.observe(card));
 
-/* ---------------------------
-   TAP TOGGLE
-----------------------------*/
 document.body.addEventListener("click",(e)=>{
     const video = e.target.closest(".video")?.querySelector("video");
     if(!video) return;
 
     if(video.paused){
-
         manuallyPaused=false;
         safePlay(video);
-
     }else{
-
         manuallyPaused=true;
         video.pause();
     }
 });
-
-function getRealIndex(index){
-
-    let count = 0;
-
-    for(let i = 0; i <= index; i++){
-
-        if(!mergedVideos[i].isAnti){
-            count++;
-        }
-    }
-
-    return count;
-}
 
 </script>
 </body>

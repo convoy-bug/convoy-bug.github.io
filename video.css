@@ -24,11 +24,16 @@ body {
     position: relative;
     height: 100vh;
     background-color: black;
+    overflow-y: scroll;
     overflow: hidden;
     width: 100%;
     max-width: 400px;
     border-radius: 20px;
     touch-action: pan-y;
+
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
 
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -45,6 +50,9 @@ body {
     background-color: black;
     scroll-snap-align: start;
     overflow: hidden;
+
+    scroll-snap-align: start;
+    touch-action: pan-y;
 }
 
 .video_player {

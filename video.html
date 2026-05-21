@@ -44,6 +44,9 @@ let currentVideoIndex = 0;
 let manuallyPaused = false;
 let scrollLocked = false;
 
+let realIndexSeen = 0;
+const seenReal = new Set();
+
 /* prevents double-trigger issues on iOS */
 let activeFlowIndex = null;
 
@@ -226,6 +229,17 @@ window.addEventListener("load", () => {
     if(target){
         target.scrollIntoView({behavior:"auto"});
         currentVideoIndex = startIndex;
+
+// rebuild real counter correctly
+realIndexSeen = 0;
+seenReal.clear();
+
+for(let i=0;i<=startIndex;i++){
+    if(mergedVideos[i] && !mergedVideos[i].isAnti){
+        seenReal.add(i);
+        realIndexSeen++;
+    }
+}
     }
 });
 
@@ -233,6 +247,10 @@ window.addEventListener("load", () => {
    ANTI FLOW (FIXED)
 ----------------------------*/
 function runAntiFlow(video,index){
+
+    if(mergedVideos[index]?.isAnti === false){
+    return; // safety guard
+}
 
     if(activeFlowIndex === index) return;
     activeFlowIndex = index;
@@ -294,16 +312,20 @@ const observer = new IntersectionObserver(entries=>{
 
         const isAnti = mergedVideos[index]?.isAnti;
 
-        const realSeen =
-            mergedVideos.slice(0,index+1)
-                .filter(v=>!v.isAnti).length;
+        // REAL VIDEO TRACKING (FIXED)
+if(!isAnti){
 
-        if(realSeen >= filteredVideos.length){
-            localStorage.removeItem("resumeVideoIndex");
-            window.location.href="results.html";
-            return;
-        }
+    if(!seenReal.has(index)){
+        seenReal.add(index);
+        realIndexSeen++;
+    }
 
+    if(realIndexSeen >= filteredVideos.length){
+        localStorage.removeItem("resumeVideoIndex");
+        window.location.href="results.html";
+        return;
+    }
+}
         if(isAnti && !scrollLocked){
             runAntiFlow(video,index);
         }
@@ -330,6 +352,18 @@ document.body.addEventListener("click",(e)=>{
         video.pause();
     }
 });
+
+function getRealIndex(index){
+    let count = 0;
+
+    for(let i = 0; i <= index; i++){
+        if(!mergedVideos[i].isAnti){
+            count++;
+        }
+    }
+
+    return count;
+}
 
 </script>
 </body>

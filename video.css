@@ -24,20 +24,14 @@ body {
 .app_videos {
     position: relative;
     height: 100vh;
-    background-color: black;
-    overflow-y: scroll;
-    overflow: hidden;
     width: 100%;
     max-width: 400px;
-    border-radius: 20px;
-    touch-action: pan-y;
+
+    background: black;
 
     overflow-y: scroll;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
-
-    -ms-overflow-style: none;
-    scrollbar-width: none;
 
     scroll-snap-type: y mandatory;
 }

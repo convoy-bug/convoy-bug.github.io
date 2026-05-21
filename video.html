@@ -24,6 +24,9 @@ let scrollLocked = false;
 let realIndexSeen = 0;
 const seenReal = new Set();
 
+let globalUnmuted = false;
+let activeVideo = null;
+
 /* prevents double-trigger issues on iOS */
 let activeFlowIndex = null;
 
@@ -177,10 +180,7 @@ renderVideos();
 function safePlay(video){
     if(!video) return;
 
-    // only set muted ONCE if not already interacted with
-    if(video.dataset.userUnmuted !== "1"){
-        video.muted = true;
-    }
+    video.muted = !globalUnmuted;
 
     const p = video.play();
     if(p) p.catch(()=>{});
@@ -267,7 +267,16 @@ const observer = new IntersectionObserver(entries=>{
         currentVideoIndex = index;
         manuallyPaused = false;
 
-        safePlay(video);
+        if (activeVideo && activeVideo !== video) {
+    activeVideo.pause();
+}
+
+activeVideo = video;
+
+// force correct audio state on focus
+video.muted = !globalUnmuted;
+
+safePlay(video);
 
         const isAnti = mergedVideos[index]?.isAnti;
 
@@ -352,13 +361,12 @@ document.body.addEventListener("click",(e)=>{
     const video = e.target.closest(".video")?.querySelector("video");
     if(!video) return;
 
-    // FIRST TIME USER INTERACTION = allow sound toggle
-    if(video.muted){
-        video.muted = false;
-        video.dataset.userUnmuted = "1";
-    } else {
-        video.muted = true;
-        video.dataset.userUnmuted = "0";
+    // FIRST REAL USER GESTURE = unlock audio globally
+    globalUnmuted = !globalUnmuted;
+
+    // apply instantly to active video only
+    if(activeVideo){
+        activeVideo.muted = !globalUnmuted;
     }
 
     if(video.paused){

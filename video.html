@@ -1,35 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
 
-<title>TikTokClone</title>
-<link rel="stylesheet" href="video.css" />
-    
+    <title>TikTokClone</title>
+    <link rel="stylesheet" href="video.css" />
 </head>
 
 <body>
-
 <div class="app_videos" id="appVideos"></div>
 
 <script>
 
+let scrollCount = parseInt(localStorage.getItem("scrollCount")) || 0;
 let currentVideoIndex = -1;
 let manuallyPaused = false;
 let scrollLocked = false;
+
+/* FIX: prevents repeated anti triggers per index */
 let antiProcessingIndex = null;
-let userInteracted = false;
+
+const params = new URLSearchParams(window.location.search);
+const selectedTags = [];
+
+params.forEach((value, key) => {
+    if (value === "on") selectedTags.push(key);
+});
 
 const TAGS = {
-    funny:1, absurd:2, relatable:3, skit:4,
-    popculture:5, meme:6, AI:7, lifestyle:8,
-    informative:9, food:10, movie:11,
-    vlog:12, critique:13, filipino:14
+    funny: 1, absurd: 2, relatable: 3, skit: 4,
+    popculture: 5, meme: 6, AI: 7, lifestyle: 8,
+    informative: 9, food: 10, movie: 11,
+    vlog: 12, critique: 13, filipino: 14
 };
+
+const selectedTagIDs = selectedTags.map(t => TAGS[t]).filter(Boolean);
 
 const videoData = [ 
             { src: "videos/1.mp4", tags: [1,4,3,14] }, 
@@ -104,46 +113,57 @@ const videoData = [
         ];
 
 const antiVideoData = [
-    { src:"videos/anti/1.mp4" },
-    { src:"videos/anti/2.mp4" },
-    { src:"videos/anti/3.mp4" }
+    { src: "videos/anti/1.mp4" },
+    { src: "videos/anti/2.mp4" },
+    { src: "videos/anti/3.mp4" }
 ];
 
 let filteredVideos = videoData;
 
-function injectAntiVideos(videos, antiVideos, interval=8){
-    const out=[];
-    let ai=0;
+if (selectedTagIDs.length > 0) {
+    filteredVideos = videoData.filter(v =>
+        v.tags.some(t => selectedTagIDs.includes(t))
+    );
+}
 
-    for(let i=0;i<videos.length;i++){
-        out.push(videos[i]);
+function injectAntiVideos(videos, antiVideos, interval = 8) {
+    const result = [];
+    let antiIndex = 0;
 
-        if((i+1)%interval===0){
-            out.push({
-                ...antiVideos[ai],
-                isAnti:true
+    for (let i = 0; i < videos.length; i++) {
+        result.push(videos[i]);
+
+        if ((i + 1) % interval === 0 && antiVideos.length) {
+            result.push({
+                ...antiVideos[antiIndex],
+                isAnti: true
             });
 
-            ai=(ai+1)%antiVideos.length;
+            antiIndex = (antiIndex + 1) % antiVideos.length;
         }
     }
-    return out;
+
+    return result;
+}
+
+function lockScroll(duration = 3000) {
+    scrollLocked = true;
+    setTimeout(() => scrollLocked = false, duration);
 }
 
 const mergedVideos = injectAntiVideos(filteredVideos, antiVideoData, 8);
-
 const appVideos = document.getElementById("appVideos");
 
-function renderVideos(){
-    mergedVideos.forEach((v,i)=>{
-        const el=document.createElement("div");
-        el.className="video";
-        el.dataset.index=i;
+function renderVideos() {
+    mergedVideos.forEach((video, index) => {
+        const el = document.createElement("div");
+        el.className = "video";
+        el.dataset.index = index;
 
-        el.innerHTML=`
+        el.innerHTML = `
             <video
                 class="video_player"
-                src="${v.src}"
+                src="${video.src}"
                 loop
                 playsinline
                 webkit-playsinline
@@ -158,109 +178,170 @@ function renderVideos(){
 
 renderVideos();
 
-const videos=document.querySelectorAll(".video_player");
+const videos = document.querySelectorAll(".video_player");
 
-videos.forEach(v=>{
+videos.forEach(v => {
     v.pause();
-    v.muted=true;
+    v.muted = true;
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
 });
 
-/* iOS gesture unlock */
-document.addEventListener("touchstart",()=>{
-    userInteracted=true;
-},{once:true});
+/* safer playback for iOS */
+function safePlay(video) {
+    if (!video) return;
 
-function safePlay(video){
-    if(!video) return;
-
-    video.muted = !userInteracted;
+    video.muted = true;
     video.load();
 
-    const p=video.play();
-    if(p&&p.catch) p.catch(()=>{});
+    const p = video.play();
+    if (p && p.catch) p.catch(() => {});
 }
 
-function playOnlyVisible(videoToPlay){
-    videos.forEach(v=>{
-        if(v===videoToPlay){
-            if(!manuallyPaused) safePlay(v);
-        }else{
+function playOnlyVisible(videoToPlay) {
+    videos.forEach(v => {
+        if (v === videoToPlay) {
+            if (!manuallyPaused) safePlay(v);
+        } else {
             v.pause();
-            v.muted=true;
+            v.muted = true;
         }
     });
 }
 
 /* OBSERVER */
-const observer=new IntersectionObserver(entries=>{
-    entries.forEach(entry=>{
+const observer = new IntersectionObserver((entries) => {
 
-        const card=entry.target;
-        const video=card.querySelector(".video_player");
-        const index=parseInt(card.dataset.index);
+    entries.forEach(entry => {
 
-        if(entry.isIntersecting&&entry.intersectionRatio>=0.6){
+        const card = entry.target;
+        const video = card.querySelector(".video_player");
+        const index = parseInt(card.dataset.index);
 
-            manuallyPaused=false;
-            currentVideoIndex=index;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+
+            manuallyPaused = false;
 
             playOnlyVisible(video);
 
-            const isAnti=mergedVideos[index]?.isAnti;
+            currentVideoIndex = index;
 
-            if(isAnti&&antiProcessingIndex!==index){
+            const isAnti = mergedVideos[index]?.isAnti;
 
-                antiProcessingIndex=index;
+            const realSeen =
+                mergedVideos.slice(0, index + 1)
+                    .filter(v => !v.isAnti).length;
 
-                scrollLocked=true;
-                setTimeout(()=>scrollLocked=false,3000);
+            const realTotal = filteredVideos.length;
 
-                const antiCount=
-                    mergedVideos.slice(0,index+1)
-                    .filter(v=>v.isAnti).length;
-
-                safePlay(video);
-
-                setTimeout(()=>{
-
-                    antiProcessingIndex=null;
-
-                    if(antiCount>=3){
-                        window.location.href="results.html";
-                    }else{
-                        window.location.href="checkpoint.html";
-                    }
-
-                },3500);
+            /* FAIL CONDITION */
+            if (realSeen >= realTotal) {
+                localStorage.removeItem("resumeVideoIndex");
+                localStorage.setItem("resultType", "fail");
+                window.location.href = "results.html";
+                return;
             }
 
-        }else{
+            /* ANTI VIDEO FIXED FLOW */
+            if (isAnti && !scrollLocked && antiProcessingIndex !== index) {
+
+                antiProcessingIndex = index;
+
+                lockScroll(3000);
+
+                localStorage.setItem("resumeVideoIndex", index + 1);
+
+                const antiCount =
+                    mergedVideos.slice(0, index + 1)
+                        .filter(v => v.isAnti).length;
+
+                // IMPORTANT: force iOS readiness
+                video.pause();
+                video.currentTime = 0;
+                video.muted = true;
+                video.load();
+
+                setTimeout(() => {
+                    safePlay(video);
+                }, 150);
+
+                // WAIT before redirect so iOS actually starts playback
+                setTimeout(() => {
+
+                    antiProcessingIndex = null;
+
+                    if (antiCount >= 3) {
+                        localStorage.removeItem("resumeVideoIndex");
+                        localStorage.setItem("resultType", "fail");
+                        window.location.href = "results.html";
+                    } else {
+                        window.location.href = "checkpoint.html";
+                    }
+
+                }, 3500);
+            }
+
+        } else {
             video.pause();
-            video.muted=true;
+            video.muted = true;
         }
-
     });
-},{threshold:0.6});
 
-document.querySelectorAll(".video").forEach(card=>{
+}, { threshold: 0.6 });
+
+document.querySelectorAll(".video").forEach(card => {
     observer.observe(card);
 
-    const v=card.querySelector(".video_player");
+    const v = card.querySelector(".video_player");
+    v.load();
 
-    card.addEventListener("click",e=>{
-        if(e.target.closest(".settingsBtn"))return;
+    card.addEventListener("click", (e) => {
+        if (e.target.closest(".settingsBtn")) return;
 
-        if(v.paused){
-            manuallyPaused=false;
+        if (v.paused) {
+            manuallyPaused = false;
             safePlay(v);
-        }else{
-            manuallyPaused=true;
+        } else {
+            manuallyPaused = true;
             v.pause();
         }
     });
 });
 
-</script>
+let touchStartY = 0;
+let isSnapping = false;
+const videoCards = document.querySelectorAll(".video");
 
+function snapTo(index) {
+    if (index < 0 || index >= videoCards.length || isSnapping) return;
+
+    isSnapping = true;
+
+    videoCards[index].scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+
+    setTimeout(() => isSnapping = false, 400);
+}
+
+appVideos.addEventListener("touchstart", e => {
+    touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+appVideos.addEventListener("touchend", e => {
+
+    if (scrollLocked || isSnapping) return;
+
+    const delta = touchStartY - e.changedTouches[0].screenY;
+
+    if (Math.abs(delta) < 50) return;
+
+    if (delta > 0) snapTo(currentVideoIndex + 1);
+    else snapTo(currentVideoIndex - 1);
+
+}, { passive: true });
+
+</script>
 </body>
 </html>

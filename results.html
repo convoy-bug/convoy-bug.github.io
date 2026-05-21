@@ -3,10 +3,7 @@
 <head>
 <meta charset="UTF-8">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Results</title>
 
@@ -41,145 +38,79 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     /* =========================
-   VIDEO COUNT
-   ========================= */
+       VIDEO COUNT
+    ========================= */
 
-const realVideosViewed =
-    parseInt(localStorage.getItem("videosViewed")) || 0;
+    const realVideosViewed =
+        parseInt(localStorage.getItem("videosViewed")) || 0;
 
-document.getElementById("count").innerText =
-    realVideosViewed;
+    document.getElementById("count").innerText = realVideosViewed;
 
-console.log(
-    "[RESULTS DEBUG]",
-    "Videos Viewed:",
-    realVideosViewed
-);
+    console.log("[RESULTS DEBUG]", "Videos Viewed:", realVideosViewed);
+
 
     /* =========================
        CHECKPOINT COUNT
-       ========================= */
+    ========================= */
 
     const checkpointCount =
-        parseInt(
-            localStorage.getItem("checkpointCount")
-        ) || 0;
+        parseInt(localStorage.getItem("checkpointCount")) || 0;
 
-    document.getElementById(
-        "checkpointCount"
-    ).innerText = checkpointCount;
+    document.getElementById("checkpointCount").innerText = checkpointCount;
 
-    console.log(
-        "[RESULTS DEBUG]",
-        "Checkpoint Count:",
-        checkpointCount
-    );
+    console.log("[RESULTS DEBUG]", "Checkpoint Count:", checkpointCount);
+
 
     /* =========================
        RESULT TYPE
-       ========================= */
+    ========================= */
 
-    const resultType =
-        localStorage.getItem("resultType");
+    const resultType = localStorage.getItem("resultType");
 
-    const title =
-        document.getElementById("title");
+    const title = document.getElementById("title");
+    const message = document.getElementById("message");
 
-    const message =
-        document.getElementById("message");
-
-    console.log(
-        "[RESULTS DEBUG]",
-        "Result Type:",
-        resultType
-    );
-
-    /* SUCCESS */
     if (resultType === "success") {
 
         title.innerText = "Congrats!";
 
         message.innerHTML = `
+            <p>You stopped scrolling.</p>
+            <br>
+            <p>This project aims to make participants reflect on media habits.</p>
+            <br>
+            <p>Short-form content can heavily affect attention span and behavior.</p>
+        `;
 
-                <p>You stopped scrolling.</p>
-
-                <br>
-
-                <p>
-                    This project aims to make
-                    participants reflect on their media
-                    habits and the quality of content they
-                    choose to consume.
-                </p>
-
-                <br>
-
-                <p>
-                    Highly addictive algorithms can
-                    instill habits like zombie scrolling
-                    (the tendency to mindlessly scroll)
-                    and bed rotting (consuming content
-                    while stuck in bed).
-                </p>
-
-                <br>
-
-                <p>
-                    Pairing this with low quality,
-                    short form, overstimulating
-                    “brain rot” content can impact
-                    your mental development and
-                    cognitive functions.
-                </p>
-            `;
-
-    /* FAIL */
     } else {
 
         title.innerText =
             "You kept scrolling through and didn’t stop.";
 
         message.innerHTML = `
-
-                <p>
-                    It would be good to set timers
-                    when using social media or doing
-                    a social media detox to lessen the
-                    effects of brain rot and exposure
-                    to brain rot content.
-                </p>
-
-                <br>
-
-                <p>
-                    Kindly write your name in your
-                    brain and paste it on the wall.
-                </p>
-
-                <br>
-
-                <p>
-                    I hope you learned more about
-                    brain rot or gained a new
-                    perspective on your media habits.
-                </p>
-            `;
+            <p>Consider setting limits on social media usage.</p>
+            <br>
+            <p>Mindless scrolling can affect focus and productivity.</p>
+        `;
     }
 
+
     /* =========================
-       FULL RESET
+       CLEANUP (FIXED)
        ========================= */
 
-    console.log(
-        "[RESULTS DEBUG]",
-        "Clearing localStorage session values..."
-    );
+    console.log("[RESULTS DEBUG]", "Cleaning session values...");
 
-    localStorage.removeItem("resumeVideoIndex");
-    localStorage.removeItem("checkpointCount");
-    localStorage.removeItem("resultType");
-    localStorage.removeItem("videosViewed");
+// session-only resets
+localStorage.removeItem("resumeVideoIndex");
+localStorage.removeItem("resultType");
+localStorage.removeItem("videosViewed");
 
+// ✅ IMPORTANT: reset checkpoint system for replay
+localStorage.removeItem("checkpointCount");
+
+// optional: reset checkpoint session guard
+sessionStorage.removeItem("lastCheckpointVisit");
 });
 
 </script>

@@ -18,6 +18,7 @@ body {
     padding: 0;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+    overflow: hidden;
 }
 
 .app_videos {
@@ -37,6 +38,8 @@ body {
 
     -ms-overflow-style: none;
     scrollbar-width: none;
+
+    scroll-snap-type: y mandatory;
 }
 
 .app_videos::-webkit-scrollbar {

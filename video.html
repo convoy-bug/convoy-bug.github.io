@@ -176,7 +176,12 @@ renderVideos();
 
 function safePlay(video){
     if(!video) return;
-    video.muted = true;
+
+    // only set muted ONCE if not already interacted with
+    if(video.dataset.userUnmuted !== "1"){
+        video.muted = true;
+    }
+
     const p = video.play();
     if(p) p.catch(()=>{});
 }
@@ -347,15 +352,23 @@ document.body.addEventListener("click",(e)=>{
     const video = e.target.closest(".video")?.querySelector("video");
     if(!video) return;
 
+    // FIRST TIME USER INTERACTION = allow sound toggle
+    if(video.muted){
+        video.muted = false;
+        video.dataset.userUnmuted = "1";
+    } else {
+        video.muted = true;
+        video.dataset.userUnmuted = "0";
+    }
+
     if(video.paused){
         manuallyPaused=false;
         safePlay(video);
-    }else{
+    } else {
         manuallyPaused=true;
         video.pause();
     }
 });
-
 </script>
 </body>
 </html>

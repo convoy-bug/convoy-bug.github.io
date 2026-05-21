@@ -71,8 +71,8 @@
             .getElementById("continueBtn")
             .addEventListener("click", () => {
 
-                window.location.href =
-                    "index.html";
+                localStorage.setItem("isReturning", "1");
+                window.location.href = "index.html";
             });
 
     </script>

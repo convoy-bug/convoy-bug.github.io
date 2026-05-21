@@ -9,6 +9,29 @@
 
 <title>TikTokClone</title>
 <link rel="stylesheet" href="video.css" />
+
+<style>
+body {
+    margin: 0;
+    background: black;
+    overflow: hidden;
+}
+.app_videos {
+    height: 100vh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+}
+.video {
+    height: 100vh;
+    scroll-snap-align: start;
+}
+.video_player {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+</style>
+
 </head>
 
 <body>
@@ -17,16 +40,12 @@
 <script>
 
 let scrollCount = parseInt(localStorage.getItem("scrollCount")) || 0;
-let currentVideoIndex = -1;
+let currentVideoIndex = 0;
 let manuallyPaused = false;
 let scrollLocked = false;
 
-/* 🚨 SINGLE SOURCE ANTI STATE */
-let antiState = {
-    active: false,
-    index: null,
-    timeout: null
-};
+/* prevents double-trigger issues on iOS */
+let activeFlowIndex = null;
 
 const params = new URLSearchParams(window.location.search);
 const selectedTags = [];
@@ -151,6 +170,9 @@ function injectAntiVideos(videos, antiVideos, interval=8){
 const mergedVideos = injectAntiVideos(filteredVideos, antiVideoData, 8);
 const appVideos = document.getElementById("appVideos");
 
+/* ---------------------------
+   RENDER
+----------------------------*/
 function renderVideos(){
     mergedVideos.forEach((v,i)=>{
         const el=document.createElement("div");
@@ -166,35 +188,54 @@ function renderVideos(){
             preload="auto"
             muted
         ></video>`;
+
         appVideos.appendChild(el);
     });
 }
-
 renderVideos();
 
-/* =========================
-   SAFE PLAY (ALL DEVICES)
-   ========================= */
+/* ---------------------------
+   IOS SAFE PLAY
+----------------------------*/
 function safePlay(video){
     if(!video) return;
 
     video.muted = true;
-    const p = video.play();
 
+    const p = video.play();
     if(p){
         p.catch(()=>{});
     }
 }
 
-/* =========================
-   ANTI VIDEO CONTROLLER
-   ========================= */
+/* ---------------------------
+   RESTORE POSITION (FIX LOOP BUG)
+----------------------------*/
+window.addEventListener("load", () => {
+
+    const savedIndex =
+        parseInt(localStorage.getItem("resumeVideoIndex"));
+
+    const startIndex =
+        !isNaN(savedIndex) ? savedIndex : 0;
+
+    const target = document.querySelector(
+        `.video[data-index="${startIndex}"]`
+    );
+
+    if(target){
+        target.scrollIntoView({behavior:"auto"});
+        currentVideoIndex = startIndex;
+    }
+});
+
+/* ---------------------------
+   ANTI FLOW (FIXED)
+----------------------------*/
 function runAntiFlow(video,index){
 
-    if(antiState.active) return;
-
-    antiState.active = true;
-    antiState.index = index;
+    if(activeFlowIndex === index) return;
+    activeFlowIndex = index;
 
     scrollLocked = true;
 
@@ -202,35 +243,34 @@ function runAntiFlow(video,index){
         mergedVideos.slice(0,index+1)
             .filter(v=>v.isAnti).length;
 
-    const vid = video;
+    video.pause();
+    video.currentTime = 0;
 
-    vid.pause();
-    vid.currentTime = 0;
-    vid.muted = true;
+    safePlay(video);
 
-    safePlay(vid);
+    /* IMPORTANT: set resume BEFORE redirect */
+    localStorage.setItem("resumeVideoIndex", index + 1);
 
-    /* safety fallback redirect */
-    antiState.timeout = setTimeout(()=>{
+    setTimeout(()=>{
 
-        antiState.active = false;
         scrollLocked = false;
+        activeFlowIndex = null;
 
-        localStorage.setItem("resumeVideoIndex",index+1);
-
-        if(antiCount>=3){
+        if(antiCount >= 3){
             localStorage.setItem("resultType","fail");
             window.location.href="results.html";
-        }else{
+        } else {
             window.location.href="checkpoint.html";
         }
 
-    }, 3500);
+    }, 3000);
 }
 
-/* =========================
-   OBSERVER
-   ========================= */
+/* ---------------------------
+   OBSERVER (DEBOUNCED)
+----------------------------*/
+let lastIndex = -1;
+
 const observer = new IntersectionObserver(entries=>{
 
     entries.forEach(entry=>{
@@ -239,32 +279,35 @@ const observer = new IntersectionObserver(entries=>{
         const video = card.querySelector("video");
         const index = parseInt(card.dataset.index);
 
-        if(entry.isIntersecting && entry.intersectionRatio>=0.6){
-
-            currentVideoIndex=index;
-            manuallyPaused=false;
-
-            safePlay(video);
-
-            const isAnti = mergedVideos[index]?.isAnti;
-
-            const realSeen =
-                mergedVideos.slice(0,index+1)
-                    .filter(v=>!v.isAnti).length;
-
-            if(realSeen >= filteredVideos.length){
-                window.location.href="results.html";
-                return;
-            }
-
-            /* ONLY TRIGGER ONCE */
-            if(isAnti && !scrollLocked){
-                runAntiFlow(video,index);
-            }
-
-        } else {
+        if(!entry.isIntersecting || entry.intersectionRatio < 0.6){
             video.pause();
+            return;
         }
+
+        if(index === lastIndex) return;
+        lastIndex = index;
+
+        currentVideoIndex = index;
+        manuallyPaused = false;
+
+        safePlay(video);
+
+        const isAnti = mergedVideos[index]?.isAnti;
+
+        const realSeen =
+            mergedVideos.slice(0,index+1)
+                .filter(v=>!v.isAnti).length;
+
+        if(realSeen >= filteredVideos.length){
+            localStorage.removeItem("resumeVideoIndex");
+            window.location.href="results.html";
+            return;
+        }
+
+        if(isAnti && !scrollLocked){
+            runAntiFlow(video,index);
+        }
+
     });
 
 },{threshold:0.6});
@@ -272,7 +315,9 @@ const observer = new IntersectionObserver(entries=>{
 document.querySelectorAll(".video")
 .forEach(card=>observer.observe(card));
 
-/* TAP */
+/* ---------------------------
+   TAP TOGGLE
+----------------------------*/
 document.body.addEventListener("click",(e)=>{
     const video = e.target.closest(".video")?.querySelector("video");
     if(!video) return;

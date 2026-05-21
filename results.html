@@ -63,6 +63,19 @@ document.addEventListener("DOMContentLoaded", () => {
         realVideosViewed;
 
     /* =========================
+       DEBUG LOGGING
+       ========================= */
+
+    console.log(
+        "[RESULTS DEBUG]",
+        {
+            mergedIndex: mergedIndex,
+            antiVideosSeen: antiSeen,
+            realVideosViewed: realVideosViewed
+        }
+    );
+
+    /* =========================
        CHECKPOINT COUNT
        ========================= */
 
@@ -74,6 +87,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById(
         "checkpointCount"
     ).innerText = checkpointCount;
+
+    console.log(
+        "[RESULTS DEBUG]",
+        "Checkpoint Count:",
+        checkpointCount
+    );
 
     /* =========================
        RESULT TYPE
@@ -88,12 +107,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const message =
         document.getElementById("message");
 
+    console.log(
+        "[RESULTS DEBUG]",
+        "Result Type:",
+        resultType
+    );
+
     /* SUCCESS */
     if (resultType === "success") {
 
         title.innerText = "Congrats!";
 
-       message.innerHTML = `
+        message.innerHTML = `
 
                 <p>You stopped scrolling.</p>
 
@@ -163,6 +188,11 @@ document.addEventListener("DOMContentLoaded", () => {
     /* =========================
        FULL RESET
        ========================= */
+
+    console.log(
+        "[RESULTS DEBUG]",
+        "Clearing localStorage session values..."
+    );
 
     localStorage.removeItem("resumeVideoIndex");
     localStorage.removeItem("checkpointCount");

@@ -10,28 +10,6 @@
 <title>TikTokClone</title>
 <link rel="stylesheet" href="video.css" />
 
-<style>
-body {
-    margin: 0;
-    background: black;
-    overflow: hidden;
-}
-.app_videos {
-    height: 100vh;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-}
-.video {
-    height: 100vh;
-    scroll-snap-align: start;
-}
-.video_player {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-</style>
-
 </head>
 
 <body>
@@ -212,7 +190,7 @@ function safePlay(video){
 }
 
 /* ---------------------------
-   RESTORE POSITION (FIX LOOP BUG)
+   RESTORE POSITION
 ----------------------------*/
 window.addEventListener("load", () => {
 
@@ -230,27 +208,39 @@ window.addEventListener("load", () => {
         target.scrollIntoView({behavior:"auto"});
         currentVideoIndex = startIndex;
 
-// rebuild real counter correctly
-realIndexSeen = 0;
-seenReal.clear();
+        /* rebuild counters */
+        realIndexSeen = 0;
+        seenReal.clear();
 
-for(let i=0;i<=startIndex;i++){
-    if(mergedVideos[i] && !mergedVideos[i].isAnti){
-        seenReal.add(i);
-        realIndexSeen++;
-    }
-}
+        for(let i=0;i<=startIndex;i++){
+
+            if(mergedVideos[i] && !mergedVideos[i].isAnti){
+
+                seenReal.add(i);
+                realIndexSeen++;
+            }
+        }
+
+        localStorage.setItem(
+            "videosScrolled",
+            realIndexSeen
+        );
+
+        console.log(
+            "[RESTORE] Videos viewed:",
+            realIndexSeen
+        );
     }
 });
 
 /* ---------------------------
-   ANTI FLOW (FIXED)
+   ANTI FLOW
 ----------------------------*/
 function runAntiFlow(video,index){
 
     if(mergedVideos[index]?.isAnti === false){
-    return; // safety guard
-}
+        return;
+    }
 
     if(activeFlowIndex === index) return;
     activeFlowIndex = index;
@@ -266,8 +256,10 @@ function runAntiFlow(video,index){
 
     safePlay(video);
 
-    /* IMPORTANT: set resume BEFORE redirect */
-    localStorage.setItem("resumeVideoIndex", index + 1);
+    localStorage.setItem(
+        "resumeVideoIndex",
+        index + 1
+    );
 
     setTimeout(()=>{
 
@@ -275,9 +267,16 @@ function runAntiFlow(video,index){
         activeFlowIndex = null;
 
         if(antiCount >= 3){
-            localStorage.setItem("resultType","fail");
+
+            localStorage.setItem(
+                "resultType",
+                "fail"
+            );
+
             window.location.href="results.html";
+
         } else {
+
             window.location.href="checkpoint.html";
         }
 
@@ -285,7 +284,7 @@ function runAntiFlow(video,index){
 }
 
 /* ---------------------------
-   OBSERVER (DEBOUNCED)
+   OBSERVER
 ----------------------------*/
 let lastIndex = -1;
 
@@ -312,21 +311,51 @@ const observer = new IntersectionObserver(entries=>{
 
         const isAnti = mergedVideos[index]?.isAnti;
 
-        // REAL VIDEO TRACKING (FIXED)
-if(!isAnti){
+        /* REAL VIDEO TRACKING */
+        if(!isAnti){
 
-    if(!seenReal.has(index)){
-        seenReal.add(index);
-        realIndexSeen++;
-    }
+            if(!seenReal.has(index)){
 
-    if(realIndexSeen >= filteredVideos.length){
-        localStorage.removeItem("resumeVideoIndex");
-        window.location.href="results.html";
-        return;
-    }
-}
+                seenReal.add(index);
+                realIndexSeen++;
+
+                localStorage.setItem(
+                    "videosScrolled",
+                    realIndexSeen
+                );
+
+                console.log(
+                    "[VIDEO VIEWED]",
+                    "Merged Index:",
+                    index,
+                    "| Real Videos Viewed:",
+                    realIndexSeen,
+                    "/",
+                    filteredVideos.length
+                );
+            }
+
+            if(realIndexSeen >= filteredVideos.length){
+
+                console.log(
+                    "[COMPLETE] All real videos viewed."
+                );
+
+                localStorage.removeItem("resumeVideoIndex");
+
+                window.location.href="results.html";
+                return;
+            }
+        }
+
         if(isAnti && !scrollLocked){
+
+            console.log(
+                "[ANTI VIDEO]",
+                "Merged Index:",
+                index
+            );
+
             runAntiFlow(video,index);
         }
 
@@ -345,18 +374,23 @@ document.body.addEventListener("click",(e)=>{
     if(!video) return;
 
     if(video.paused){
+
         manuallyPaused=false;
         safePlay(video);
+
     }else{
+
         manuallyPaused=true;
         video.pause();
     }
 });
 
 function getRealIndex(index){
+
     let count = 0;
 
     for(let i = 0; i <= index; i++){
+
         if(!mergedVideos[i].isAnti){
             count++;
         }

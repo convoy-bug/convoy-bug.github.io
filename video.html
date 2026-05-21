@@ -498,68 +498,87 @@
                         }
 
                         if (
-                            isAnti &&
-                            !scrollLocked
-                        ) {
+    isAnti &&
+    !scrollLocked
+) {
 
-                            lockScroll(3000);
+    lockScroll(3000);
 
-                            localStorage.setItem(
-                                "resumeVideoIndex",
-                                index + 1
-                            );
+    // SAVE next resume position
+    localStorage.setItem(
+        "resumeVideoIndex",
+        index + 1
+    );
 
-                            const antiNumber =
-                                mergedVideos
-                                    .slice(0, index + 1)
-                                    .filter(v => v.isAnti)
-                                    .length;
+    const antiNumber =
+        mergedVideos
+            .slice(0, index + 1)
+            .filter(v => v.isAnti)
+            .length;
 
-                            const goNext = () => {
+    // FORCE anti video playback on iOS
+    video.muted = false;
 
-                                window.removeEventListener(
-                                    "wheel",
-                                    goNext
-                                );
+    video.play()
+        .then(() => {
 
-                                window.removeEventListener(
-                                    "touchend",
-                                    goNext
-                                );
+            // wait before allowing redirect
+            setTimeout(() => {
 
-                                if (antiNumber >= 3) {
+                const goNext = () => {
 
-                                    localStorage.removeItem(
-                                        "resumeVideoIndex"
-                                    );
+                    window.removeEventListener(
+                        "wheel",
+                        goNext
+                    );
 
-                                    localStorage.setItem(
-                                        "resultType",
-                                        "fail"
-                                    );
+                    window.removeEventListener(
+                        "touchend",
+                        goNext
+                    );
 
-                                    window.location.href =
-                                        "results.html";
+                    if (antiNumber >= 3) {
 
-                                } else {
+                        localStorage.removeItem(
+                            "resumeVideoIndex"
+                        );
 
-                                    window.location.href =
-                                        "checkpoint.html";
-                                }
-                            };
+                        localStorage.setItem(
+                            "resultType",
+                            "fail"
+                        );
 
-                            window.addEventListener(
-                                "wheel",
-                                goNext,
-                                { once: true }
-                            );
+                        window.location.href =
+                            "results.html";
 
-                            window.addEventListener(
-                                "touchend",
-                                goNext,
-                                { once: true }
-                            );
-                        }
+                    } else {
+
+                        window.location.href =
+                            "checkpoint.html";
+                    }
+                };
+
+                // desktop
+                window.addEventListener(
+                    "wheel",
+                    goNext,
+                    { once: true }
+                );
+
+                // mobile
+                window.addEventListener(
+                    "touchend",
+                    goNext,
+                    { once: true }
+                );
+
+            }, 3000);
+
+        })
+        .catch(err => {
+            console.log(err);
+        });
+}
 
                     } else {
 

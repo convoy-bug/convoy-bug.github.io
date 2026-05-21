@@ -180,10 +180,15 @@ renderVideos();
 function safePlay(video){
     if(!video) return;
 
-    video.muted = !globalUnmuted;
+    if(globalUnmuted){
+        video.muted = false;
+        video.defaultMuted = false;
+        video.volume = 1;
+    } else {
+        video.muted = true;
+    }
 
-    const p = video.play();
-    if(p) p.catch(()=>{});
+    video.play().catch(()=>{});
 }
 
 /* RESTORE */
@@ -273,8 +278,6 @@ const observer = new IntersectionObserver(entries=>{
 
 activeVideo = video;
 
-// force correct audio state on focus
-video.muted = !globalUnmuted;
 
 safePlay(video);
 
@@ -357,23 +360,47 @@ safePlay(video);
 document.querySelectorAll(".video")
 .forEach(card=>observer.observe(card));
 
-document.body.addEventListener("click",(e)=>{
+document.body.addEventListener("click", (e) => {
     const video = e.target.closest(".video")?.querySelector("video");
-    if(!video) return;
+    if (!video) return;
 
-    // FIRST REAL USER GESTURE = unlock audio globally
-    globalUnmuted = !globalUnmuted;
+    // detect if this is an audio-toggle intent (double tap / repeated tap safe)
+    const isSameVideo = activeVideo === video;
 
-    // apply instantly to active video only
-    if(activeVideo){
-        activeVideo.muted = !globalUnmuted;
+    if (!activeVideo) {
+        activeVideo = video;
     }
 
-    if(video.paused){
-        manuallyPaused=false;
+    // FIRST TAP BEHAVIOR: unlock audio globally
+    if (!globalUnmuted) {
+        globalUnmuted = true;
+
+        if (activeVideo) {
+            activeVideo.muted = false;
+            activeVideo.volume = 1;
+            activeVideo.defaultMuted = false;
+        }
+
+        // ensure playback resumes cleanly
+        safePlay(activeVideo);
+
+        console.log("[AUDIO UNLOCKED]");
+        return;
+    }
+
+    // UPDATE active video reference
+    activeVideo = video;
+
+    // enforce correct audio state every time
+    video.muted = false;
+    video.volume = 1;
+
+    // PLAY / PAUSE TOGGLE (ONLY AFTER AUDIO IS UNLOCKED)
+    if (video.paused) {
+        manuallyPaused = false;
         safePlay(video);
     } else {
-        manuallyPaused=true;
+        manuallyPaused = true;
         video.pause();
     }
 });

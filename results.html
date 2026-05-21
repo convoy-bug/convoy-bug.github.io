@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
 <title>Results</title>
 
@@ -22,6 +25,11 @@
     <div id="message"></div>
 
     <p>
+        Videos viewed:
+        <span id="count">0</span>
+    </p>
+
+    <p>
         Checkpoints reached:
         <span id="checkpointCount">0</span>
     </p>
@@ -32,54 +40,113 @@
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    const checkpointCount =
-        parseInt(localStorage.getItem("checkpointCount")) || 0;
+    /* =========================
+       VIDEO COUNT
+       ========================= */
 
-    document.getElementById("checkpointCount").innerText =
-        checkpointCount;
+    /* resumeVideoIndex stores merged index
+       so we convert it into REAL videos only */
+
+    const mergedIndex =
+        parseInt(localStorage.getItem("resumeVideoIndex")) || 0;
+
+    /* anti appears every 9th slot
+       (8 real + 1 anti) */
+
+    const antiSeen =
+        Math.floor(mergedIndex / 9);
+
+    const realVideosViewed =
+        Math.max(0, mergedIndex - antiSeen);
+
+    document.getElementById("count").innerText =
+        realVideosViewed;
+
+    /* =========================
+       CHECKPOINT COUNT
+       ========================= */
+
+    const checkpointCount =
+        parseInt(
+            localStorage.getItem("checkpointCount")
+        ) || 0;
+
+    document.getElementById(
+        "checkpointCount"
+    ).innerText = checkpointCount;
+
+    /* =========================
+       RESULT TYPE
+       ========================= */
 
     const resultType =
         localStorage.getItem("resultType");
 
-    const title = document.getElementById("title");
-    const message = document.getElementById("message");
+    const title =
+        document.getElementById("title");
 
+    const message =
+        document.getElementById("message");
+
+    /* SUCCESS */
     if (resultType === "success") {
 
         title.innerText = "Congrats!";
 
         message.innerHTML = `
+
             <p>You stopped scrolling.</p>
+
             <br>
+
             <p>
-                This project reflects on media consumption habits
-                and short-form content addiction.
+                This project aims to encourage reflection
+                on media habits and short-form content
+                consumption.
+            </p>
+
+            <br>
+
+            <p>
+                Endless scrolling and overstimulating
+                content can negatively affect focus,
+                attention span, and productivity.
             </p>
         `;
 
+    /* FAIL */
     } else {
 
         title.innerText =
             "You kept scrolling through and didn’t stop.";
 
         message.innerHTML = `
+
             <p>
-                Consider setting limits for social media use
-                to reduce mindless scrolling.
+                Consider setting limits or timers
+                when using social media platforms.
+            </p>
+
+            <br>
+
+            <p>
+                Taking breaks from highly stimulating
+                content can improve focus and reduce
+                mindless scrolling habits.
             </p>
         `;
     }
 
     /* =========================
-       FULL RESET (NEW SYSTEM SAFE)
-    ========================= */
-    localStorage.removeItem("resultType");
+       FULL RESET
+       ========================= */
+
     localStorage.removeItem("resumeVideoIndex");
     localStorage.removeItem("checkpointCount");
+    localStorage.removeItem("resultType");
 
 });
 
 </script>
-
 </body>
 </html>

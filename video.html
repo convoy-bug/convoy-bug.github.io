@@ -238,6 +238,9 @@ window.addEventListener("load", () => {
 ----------------------------*/
 function runAntiFlow(video,index){
 
+    if(scrollLocked) return;
+    if(mergedVideos[index]?.isAnti !== true) return;
+
     if(mergedVideos[index]?.isAnti === false){
         return;
     }
@@ -339,15 +342,39 @@ const observer = new IntersectionObserver(entries=>{
 
         if(isAnti && !scrollLocked){
 
+    console.log(
+        "[ANTI VIDEO PENDING]",
+        "Index:",
+        index
+    );
+
+    // prevent instant trigger during scroll momentum (iOS fix)
+    setTimeout(() => {
+
+        const cardNow =
+            document.querySelector(`.video[data-index="${index}"]`);
+
+        if(!cardNow) return;
+
+        const rect = cardNow.getBoundingClientRect();
+        const fullyCentered =
+            rect.top >= 0 &&
+            rect.top < window.innerHeight * 0.25;
+
+        // only trigger if STILL centered after delay
+        if(fullyCentered && !scrollLocked){
+
             console.log(
-                "[ANTI VIDEO]",
-                "Merged Index:",
+                "[ANTI VIDEO CONFIRMED]",
+                "Triggering flow:",
                 index
             );
 
-            runAntiFlow(video,index);
+            runAntiFlow(video, index);
         }
 
+    }, 250);
+}
     });
 
 },{threshold:0.6});

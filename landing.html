@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toggle Page</title>
+    <link rel="stylesheet" href="landing.css" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+
+    <div id="1">
+        <h1>Welcome to</h1>
+        <h1 id="title">Iskamskrol</h1>
+        <p>Choose from the following tags</p>
+    </div>
+
+    <div id="2">
+
+    <button class="toggle" data-name="funny">#funny (OFF)</button>
+    <button class="toggle" data-name="absurd">#absurd (OFF)</button>
+    <button class="toggle" data-name="relatable">#relatable (OFF)</button>
+    <button class="toggle" data-name="skit">#skit (OFF)</button>
+    <button class="toggle" data-name="popculture">#popculture (OFF)</button>
+    <button class="toggle" data-name="meme">#meme (OFF)</button>
+    <button class="toggle" data-name="AI">#AI (OFF)</button>
+    <button class="toggle" data-name="lifestyle">#lifestyle (OFF)</button>
+    <button class="toggle" data-name="informative">#informative (OFF)</button>
+    <button class="toggle" data-name="food">#food (OFF)</button>
+    <button class="toggle" data-name="movie">#movie (OFF)</button>
+    <button class="toggle" data-name="vlog">#vlog (OFF)</button>
+    <button class="toggle" data-name="critique">#critique (OFF)</button>
+    <button class="toggle" data-name="filipino">#filipino (OFF)</button>
+
+    </div>
+    <br><br>
+
+    <div id="3">
+
+    <button id="submitBtn">Go to Next Page</button>
+
+    </div>
+
+ <script>
+
+    // Start a fresh session ONLY once per tab/app launch
+    if (!sessionStorage.getItem("sessionStarted")) {
+
+        localStorage.setItem("scrollCount", "0");
+        localStorage.removeItem("resumeVideoIndex");
+
+        sessionStorage.setItem("sessionStarted", "true");
+    }
+
+    const toggles = document.querySelectorAll(".toggle");
+
+    toggles.forEach(button => {
+
+        button.dataset.state = "off";
+
+        button.textContent =
+            "#" + button.dataset.name + " (OFF)";
+
+        button.classList.remove("active");
+
+        button.addEventListener("click", () => {
+
+            if (button.dataset.state === "off") {
+
+                button.dataset.state = "on";
+
+                button.textContent =
+                    "#" + button.dataset.name + " (ON)";
+
+                button.classList.add("active");
+
+            } else {
+
+                button.dataset.state = "off";
+
+                button.textContent =
+                    "#" + button.dataset.name + " (OFF)";
+
+                button.classList.remove("active");
+            }
+        });
+    });
+
+    document.getElementById("submitBtn")
+        .addEventListener("click", () => {
+
+        const data = {};
+
+        toggles.forEach(button => {
+
+            data[button.dataset.name] =
+                button.dataset.state;
+        });
+
+        const params =
+            new URLSearchParams(data);
+
+        window.location.href =
+            "video.html?" + params.toString();
+    });
+
+</script>
+</body>
+</html>

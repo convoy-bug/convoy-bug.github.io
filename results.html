@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Results</title>
+
+    <link rel="stylesheet" href="results.css" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="container">
+
+        <h1 id="title"></h1>
+
+        <div id="message"></div>
+
+        <p>
+            Videos viewed:
+            <span id="count">0</span>
+        </p>
+
+        <p>
+            Checkpoints reached:
+            <span id="checkpointCount">0</span>
+        </p>
+
+</div>
+
+    </div>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+
+        // safely parse count
+        const finalCount =
+            parseInt(localStorage.getItem("scrollCount")) || 0;
+
+        const checkpointCount =
+            parseInt(
+                localStorage.getItem("checkpointCount")
+            ) || 0;
+
+        document.getElementById(
+            "checkpointCount"
+        ).innerText = checkpointCount;
+
+        document.getElementById("count").innerText =
+            finalCount;
+
+        const resultType =
+            localStorage.getItem("resultType");
+
+        const title =
+            document.getElementById("title");
+
+        const message =
+            document.getElementById("message");
+
+        // SUCCESS STATE
+        if (resultType === "success") {
+
+            title.innerText = "Congrats!";
+
+            message.innerHTML = `
+
+                <p>You stopped scrolling.</p>
+
+                <br>
+
+                <p>
+                    This project aims to make
+                    participants reflect on their media
+                    habits and the quality of content they
+                    choose to consume.
+                </p>
+
+                <br>
+
+                <p>
+                    Highly addictive algorithms can
+                    instill habits like zombie scrolling
+                    (the tendency to mindlessly scroll)
+                    and bed rotting (consuming content
+                    while stuck in bed).
+                </p>
+
+                <br>
+
+                <p>
+                    Pairing this with low quality,
+                    short form, overstimulating
+                    “brain rot” content can impact
+                    your mental development and
+                    cognitive functions.
+                </p>
+            `;
+
+        // FAIL STATE
+        } else {
+
+            title.innerText =
+                "You kept scrolling through and didn’t stop.";
+
+            message.innerHTML = `
+
+                <p>
+                    It would be good to set timers
+                    when using social media or doing
+                    a social media detox to lessen the
+                    effects of brain rot and exposure
+                    to brain rot content.
+                </p>
+
+                <br>
+
+                <p>
+                    Kindly write your name in your
+                    brain and paste it on the wall.
+                </p>
+
+                <br>
+
+                <p>
+                    I hope you learned more about
+                    brain rot or gained a new
+                    perspective on your media habits.
+                </p>
+            `;
+        }
+
+        // FULL reset after showing results
+        localStorage.removeItem("sessionStarted");
+        localStorage.removeItem("resumeVideoIndex");
+        localStorage.removeItem("antiVideoCount");
+        localStorage.removeItem("scrollCount");
+        localStorage.removeItem("resultType");
+        localStorage.removeItem("checkpointCount");
+
+    });
+</script>
+</body>
+</html>

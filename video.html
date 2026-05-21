@@ -444,81 +444,87 @@
                         }
 
                         // ANTI VIDEO LOGIC
-                        if (
-                            isAnti &&
-                            !scrollLocked &&
-                            !antiTriggered
-                        ) {
+                        // ANTI VIDEO LOGIC
+if (
+    isAnti &&
+    !scrollLocked &&
+    !antiTriggered
+) {
 
-                            antiTriggered = true;
+    antiTriggered = true;
 
-                            lockScroll(3000);
+    lockScroll(3000);
 
-                            localStorage.setItem(
-                                "resumeVideoIndex",
-                                index + 1
-                            );
+    localStorage.setItem(
+        "resumeVideoIndex",
+        index + 1
+    );
 
-                            const antiNumber =
-                                mergedVideos
-                                    .slice(0, index + 1)
-                                    .filter(v => v.isAnti)
-                                    .length;
+    const antiNumber =
+        mergedVideos
+            .slice(0, index + 1)
+            .filter(v => v.isAnti)
+            .length;
 
-                            video.pause();
+    // reset video
+    video.pause();
+    video.currentTime = 0;
 
-                            video.currentTime = 0;
+    // REQUIRED FOR IOS
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
 
-                            video.muted = false;
+    // force load
+    video.load();
 
-                            const promise =
-                                video.play();
+    // attempt playback
+    const tryPlay = () => {
 
-                            if (promise !== undefined) {
+        const playPromise = video.play();
 
-                                promise
-                                    .then(() => {
+        if (playPromise !== undefined) {
 
-                                        setTimeout(() => {
+            playPromise
+                .then(() => {
+                    console.log("Anti video playing");
+                })
+                .catch(err => {
+                    console.log("iOS play fail:", err);
+                });
+        }
+    };
 
-                                            if (
-                                                antiNumber >= 3
-                                            ) {
+    // slight delay helps iOS
+    setTimeout(tryPlay, 100);
 
-                                                localStorage.removeItem(
-                                                    "resumeVideoIndex"
-                                                );
+    // ALWAYS redirect after 3 sec
+    // independent from playback success
+    setTimeout(() => {
 
-                                                localStorage.setItem(
-                                                    "resultType",
-                                                    "fail"
-                                                );
+        if (antiNumber >= 3) {
 
-                                                window.location.href =
-                                                    "results.html";
+            localStorage.removeItem(
+                "resumeVideoIndex"
+            );
 
-                                            } else {
+            localStorage.setItem(
+                "resultType",
+                "fail"
+            );
 
-                                                window.location.href =
-                                                    "checkpoint.html";
-                                            }
+            window.location.href =
+                "results.html";
 
-                                        }, 3000);
+        } else {
 
-                                    })
-                                    .catch(err => {
+            window.location.href =
+                "checkpoint.html";
+        }
 
-                                        console.log(err);
-
-                                        setTimeout(() => {
-
-                                            window.location.href =
-                                                "checkpoint.html";
-
-                                        }, 3000);
-                                    });
-                            }
-                        }
+    }, 3000);
+}
 
                     } else {
 

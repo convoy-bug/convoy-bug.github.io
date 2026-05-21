@@ -41,39 +41,20 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     /* =========================
-       VIDEO COUNT
-       ========================= */
+   VIDEO COUNT
+   ========================= */
 
-    /* resumeVideoIndex stores merged index
-       so we convert it into REAL videos only */
+const realVideosViewed =
+    parseInt(localStorage.getItem("videosViewed")) || 0;
 
-    const mergedIndex =
-        parseInt(localStorage.getItem("resumeVideoIndex")) || 0;
+document.getElementById("count").innerText =
+    realVideosViewed;
 
-    /* anti appears every 9th slot
-       (8 real + 1 anti) */
-
-    const antiSeen =
-        Math.floor(mergedIndex / 9);
-
-    const realVideosViewed =
-        Math.max(0, mergedIndex - antiSeen);
-
-    document.getElementById("count").innerText =
-        realVideosViewed;
-
-    /* =========================
-       DEBUG LOGGING
-       ========================= */
-
-    console.log(
-        "[RESULTS DEBUG]",
-        {
-            mergedIndex: mergedIndex,
-            antiVideosSeen: antiSeen,
-            realVideosViewed: realVideosViewed
-        }
-    );
+console.log(
+    "[RESULTS DEBUG]",
+    "Videos Viewed:",
+    realVideosViewed
+);
 
     /* =========================
        CHECKPOINT COUNT
@@ -197,6 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.removeItem("resumeVideoIndex");
     localStorage.removeItem("checkpointCount");
     localStorage.removeItem("resultType");
+    localStorage.removeItem("videosViewed");
 
 });
 

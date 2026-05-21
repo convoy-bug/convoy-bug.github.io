@@ -9,7 +9,6 @@
 
 <title>TikTokClone</title>
 <link rel="stylesheet" href="video.css" />
-
 </head>
 
 <body>
@@ -21,13 +20,19 @@ let scrollCount = parseInt(localStorage.getItem("scrollCount")) || 0;
 let currentVideoIndex = -1;
 let manuallyPaused = false;
 let scrollLocked = false;
-let antiProcessingIndex = null;
+
+/* 🚨 SINGLE SOURCE ANTI STATE */
+let antiState = {
+    active: false,
+    index: null,
+    timeout: null
+};
 
 const params = new URLSearchParams(window.location.search);
 const selectedTags = [];
 
-params.forEach((v,k) => {
-    if (v === "on") selectedTags.push(k);
+params.forEach((v,k)=>{
+    if(v==="on") selectedTags.push(k);
 });
 
 const TAGS = {
@@ -37,7 +42,7 @@ const TAGS = {
     vlog:12, critique:13, filipino:14
 };
 
-const selectedTagIDs = selectedTags.map(t => TAGS[t]).filter(Boolean);
+const selectedTagIDs = selectedTags.map(t=>TAGS[t]).filter(Boolean);
 
 const videoData = [ 
             { src: "videos/1.mp4", tags: [1,4,3,14] }, 
@@ -119,25 +124,25 @@ const antiVideoData = [
 
 let filteredVideos = videoData;
 
-if (selectedTagIDs.length) {
+if(selectedTagIDs.length){
     filteredVideos = videoData.filter(v =>
-        v.tags.some(t => selectedTagIDs.includes(t))
+        v.tags.some(t=>selectedTagIDs.includes(t))
     );
 }
 
-function injectAntiVideos(videos, antiVideos, interval=8) {
-    const res = [];
-    let ai = 0;
+function injectAntiVideos(videos, antiVideos, interval=8){
+    const res=[];
+    let ai=0;
 
-    for (let i=0;i<videos.length;i++) {
+    for(let i=0;i<videos.length;i++){
         res.push(videos[i]);
 
-        if ((i+1)%interval===0 && antiVideos.length) {
+        if((i+1)%interval===0 && antiVideos.length){
             res.push({
                 ...antiVideos[ai],
                 isAnti:true
             });
-            ai = (ai+1)%antiVideos.length;
+            ai=(ai+1)%antiVideos.length;
         }
     }
     return res;
@@ -146,7 +151,7 @@ function injectAntiVideos(videos, antiVideos, interval=8) {
 const mergedVideos = injectAntiVideos(filteredVideos, antiVideoData, 8);
 const appVideos = document.getElementById("appVideos");
 
-function renderVideos() {
+function renderVideos(){
     mergedVideos.forEach((v,i)=>{
         const el=document.createElement("div");
         el.className="video";
@@ -164,62 +169,82 @@ function renderVideos() {
         appVideos.appendChild(el);
     });
 }
+
 renderVideos();
 
 /* =========================
-   IOS SAFE PLAY CORE FIX
+   SAFE PLAY (ALL DEVICES)
    ========================= */
-function safePlay(video) {
-    if (!video) return;
+function safePlay(video){
+    if(!video) return;
 
-    video.pause();
     video.muted = true;
+    const p = video.play();
 
-    const tryPlay = () => {
-        const p = video.play();
-        if (!p) return;
-
-        p.then(() => {
-            // only unmute AFTER stable playback begins
-            setTimeout(() => {
-                if (!manuallyPaused) {
-                    video.muted = false;
-                }
-            }, 200);
-        }).catch(()=>{});
-    };
-
-    if (video.readyState >= 2) {
-        tryPlay();
-    } else {
-        video.addEventListener("loadeddata", tryPlay, { once:true });
+    if(p){
+        p.catch(()=>{});
     }
 }
 
-function playOnlyVisible(target) {
-    document.querySelectorAll(".video_player").forEach(v=>{
-        if (v === target) {
-            if (!manuallyPaused) safePlay(v);
-        } else {
-            v.pause();
-            v.muted = true;
+/* =========================
+   ANTI VIDEO CONTROLLER
+   ========================= */
+function runAntiFlow(video,index){
+
+    if(antiState.active) return;
+
+    antiState.active = true;
+    antiState.index = index;
+
+    scrollLocked = true;
+
+    const antiCount =
+        mergedVideos.slice(0,index+1)
+            .filter(v=>v.isAnti).length;
+
+    const vid = video;
+
+    vid.pause();
+    vid.currentTime = 0;
+    vid.muted = true;
+
+    safePlay(vid);
+
+    /* safety fallback redirect */
+    antiState.timeout = setTimeout(()=>{
+
+        antiState.active = false;
+        scrollLocked = false;
+
+        localStorage.setItem("resumeVideoIndex",index+1);
+
+        if(antiCount>=3){
+            localStorage.setItem("resultType","fail");
+            window.location.href="results.html";
+        }else{
+            window.location.href="checkpoint.html";
         }
-    });
+
+    }, 3500);
 }
 
-/* OBSERVER */
+/* =========================
+   OBSERVER
+   ========================= */
 const observer = new IntersectionObserver(entries=>{
+
     entries.forEach(entry=>{
+
         const card = entry.target;
-        const video = card.querySelector(".video_player");
+        const video = card.querySelector("video");
         const index = parseInt(card.dataset.index);
 
-        if (entry.isIntersecting && entry.intersectionRatio>=0.6) {
+        if(entry.isIntersecting && entry.intersectionRatio>=0.6){
 
-            manuallyPaused=false;
             currentVideoIndex=index;
+            manuallyPaused=false;
 
-            playOnlyVisible(video);
+            safePlay(video);
 
             const isAnti = mergedVideos[index]?.isAnti;
 
@@ -227,60 +252,35 @@ const observer = new IntersectionObserver(entries=>{
                 mergedVideos.slice(0,index+1)
                     .filter(v=>!v.isAnti).length;
 
-            if (realSeen >= filteredVideos.length) {
-                localStorage.setItem("resultType","fail");
+            if(realSeen >= filteredVideos.length){
                 window.location.href="results.html";
                 return;
             }
 
-            if (isAnti && !scrollLocked && antiProcessingIndex!==index) {
-
-                antiProcessingIndex=index;
-                scrollLocked=true;
-
-                localStorage.setItem("resumeVideoIndex",index+1);
-
-                const antiCount =
-                    mergedVideos.slice(0,index+1)
-                        .filter(v=>v.isAnti).length;
-
-                video.pause();
-                video.currentTime = 0;
-
-                safePlay(video);
-
-                setTimeout(()=>{
-                    antiProcessingIndex=null;
-                    scrollLocked=false;
-
-                    if (antiCount>=3) {
-                        window.location.href="results.html";
-                    } else {
-                        window.location.href="checkpoint.html";
-                    }
-                },3000);
+            /* ONLY TRIGGER ONCE */
+            if(isAnti && !scrollLocked){
+                runAntiFlow(video,index);
             }
 
         } else {
             video.pause();
-            video.muted = true;
         }
     });
+
 },{threshold:0.6});
 
-document.querySelectorAll(".video").forEach(card=>{
-    observer.observe(card);
-});
+document.querySelectorAll(".video")
+.forEach(card=>observer.observe(card));
 
-/* user tap */
-appVideos.addEventListener("click",(e)=>{
+/* TAP */
+document.body.addEventListener("click",(e)=>{
     const video = e.target.closest(".video")?.querySelector("video");
-    if (!video) return;
+    if(!video) return;
 
-    if (video.paused) {
+    if(video.paused){
         manuallyPaused=false;
         safePlay(video);
-    } else {
+    }else{
         manuallyPaused=true;
         video.pause();
     }

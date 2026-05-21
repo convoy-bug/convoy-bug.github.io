@@ -144,7 +144,6 @@ function injectAntiVideos(videos, antiVideos, interval=8) {
 }
 
 const mergedVideos = injectAntiVideos(filteredVideos, antiVideoData, 8);
-
 const appVideos = document.getElementById("appVideos");
 
 function renderVideos() {
@@ -162,39 +161,43 @@ function renderVideos() {
             preload="auto"
             muted
         ></video>`;
-
         appVideos.appendChild(el);
     });
 }
 renderVideos();
 
-const videos = document.querySelectorAll(".video_player");
-
 /* =========================
-   FIXED IOS PLAY FUNCTION
+   IOS SAFE PLAY CORE FIX
    ========================= */
 function safePlay(video) {
     if (!video) return;
 
-    // MUST start muted for iOS
+    video.pause();
     video.muted = true;
 
-    const p = video.play();
+    const tryPlay = () => {
+        const p = video.play();
+        if (!p) return;
 
-    if (!p) return;
+        p.then(() => {
+            // only unmute AFTER stable playback begins
+            setTimeout(() => {
+                if (!manuallyPaused) {
+                    video.muted = false;
+                }
+            }, 200);
+        }).catch(()=>{});
+    };
 
-    p.then(() => {
-        // IMPORTANT: restore audio AFTER playback starts
-        setTimeout(() => {
-            if (!manuallyPaused) {
-                video.muted = false;
-            }
-        }, 150);
-    }).catch(()=>{});
+    if (video.readyState >= 2) {
+        tryPlay();
+    } else {
+        video.addEventListener("loadeddata", tryPlay, { once:true });
+    }
 }
 
 function playOnlyVisible(target) {
-    videos.forEach(v=>{
+    document.querySelectorAll(".video_player").forEach(v=>{
         if (v === target) {
             if (!manuallyPaused) safePlay(v);
         } else {
@@ -214,8 +217,9 @@ const observer = new IntersectionObserver(entries=>{
         if (entry.isIntersecting && entry.intersectionRatio>=0.6) {
 
             manuallyPaused=false;
-            playOnlyVisible(video);
             currentVideoIndex=index;
+
+            playOnlyVisible(video);
 
             const isAnti = mergedVideos[index]?.isAnti;
 
@@ -240,14 +244,12 @@ const observer = new IntersectionObserver(entries=>{
                     mergedVideos.slice(0,index+1)
                         .filter(v=>v.isAnti).length;
 
-                // play anti video correctly
                 video.pause();
-                video.currentTime=0;
+                video.currentTime = 0;
 
                 safePlay(video);
 
                 setTimeout(()=>{
-
                     antiProcessingIndex=null;
                     scrollLocked=false;
 
@@ -256,13 +258,12 @@ const observer = new IntersectionObserver(entries=>{
                     } else {
                         window.location.href="checkpoint.html";
                     }
-
                 },3000);
             }
 
         } else {
             video.pause();
-            video.muted=true;
+            video.muted = true;
         }
     });
 },{threshold:0.6});
@@ -271,7 +272,7 @@ document.querySelectorAll(".video").forEach(card=>{
     observer.observe(card);
 });
 
-/* tap to toggle */
+/* user tap */
 appVideos.addEventListener("click",(e)=>{
     const video = e.target.closest(".video")?.querySelector("video");
     if (!video) return;

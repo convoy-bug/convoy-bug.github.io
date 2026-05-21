@@ -314,39 +314,28 @@ const observer = new IntersectionObserver(entries=>{
         /* REAL VIDEO TRACKING */
         if(!isAnti){
 
-            if(!seenReal.has(index)){
+    if(!seenReal.has(index)){
+        seenReal.add(index);
+        realIndexSeen++;
 
-                seenReal.add(index);
-                realIndexSeen++;
+        localStorage.setItem(
+            "videosViewed",
+            realIndexSeen
+        );
 
-                localStorage.setItem(
-                    "videosScrolled",
-                    realIndexSeen
-                );
+        console.log(
+            "[VIDEO VIEWED]",
+            "Real Videos Viewed:",
+            realIndexSeen
+        );
+    }
 
-                console.log(
-                    "[VIDEO VIEWED]",
-                    "Merged Index:",
-                    index,
-                    "| Real Videos Viewed:",
-                    realIndexSeen,
-                    "/",
-                    filteredVideos.length
-                );
-            }
-
-            if(realIndexSeen >= filteredVideos.length){
-
-                console.log(
-                    "[COMPLETE] All real videos viewed."
-                );
-
-                localStorage.removeItem("resumeVideoIndex");
-
-                window.location.href="results.html";
-                return;
-            }
-        }
+    if(realIndexSeen >= filteredVideos.length){
+        localStorage.removeItem("resumeVideoIndex");
+        window.location.href="results.html";
+        return;
+    }
+}
 
         if(isAnti && !scrollLocked){
 

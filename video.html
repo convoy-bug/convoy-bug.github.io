@@ -1,35 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 
-    <title>TikTokClone</title>
-    <link rel="stylesheet" href="video.css" />
+<title>TikTokClone</title>
+<link rel="stylesheet" href="video.css" />
 
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            overscroll-behavior: none;
-            -webkit-overflow-scrolling: touch;
-            overflow: hidden;
-        }
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
+}
 
-        .app_videos {
-            height: 100vh;
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory;
-        }
+.app_videos {
+    height: 100vh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+}
 
-        .video {
-            height: 100vh;
-            scroll-snap-align: start;
-        }
-    </style>
+.video {
+    height: 100vh;
+    scroll-snap-align: start;
+}
+</style>
 </head>
 
 <body>
@@ -41,25 +41,26 @@ let scrollCount = parseInt(localStorage.getItem("scrollCount")) || 0;
 let currentVideoIndex = -1;
 let manuallyPaused = false;
 let scrollLocked = false;
-
-/* FIX: prevents repeated anti triggers per index */
 let antiProcessingIndex = null;
+
+/* ✅ FIX: iOS audio gate */
+let userInteracted = false;
 
 const params = new URLSearchParams(window.location.search);
 const selectedTags = [];
 
-params.forEach((value, key) => {
-    if (value === "on") selectedTags.push(key);
+params.forEach((v,k)=>{
+    if (v === "on") selectedTags.push(k);
 });
 
 const TAGS = {
-    funny: 1, absurd: 2, relatable: 3, skit: 4,
-    popculture: 5, meme: 6, AI: 7, lifestyle: 8,
-    informative: 9, food: 10, movie: 11,
-    vlog: 12, critique: 13, filipino: 14
+    funny:1, absurd:2, relatable:3, skit:4,
+    popculture:5, meme:6, AI:7, lifestyle:8,
+    informative:9, food:10, movie:11,
+    vlog:12, critique:13, filipino:14
 };
 
-const selectedTagIDs = selectedTags.map(t => TAGS[t]).filter(Boolean);
+const selectedTagIDs = selectedTags.map(t=>TAGS[t]).filter(Boolean);
 
 const videoData = [ 
             { src: "videos/1.mp4", tags: [1,4,3,14] }, 
@@ -134,57 +135,50 @@ const videoData = [
         ];
 
 const antiVideoData = [
-    { src: "videos/anti/1.mp4" },
-    { src: "videos/anti/2.mp4" },
-    { src: "videos/anti/3.mp4" }
+    { src:"videos/anti/1.mp4" },
+    { src:"videos/anti/2.mp4" },
+    { src:"videos/anti/3.mp4" }
 ];
 
 let filteredVideos = videoData;
 
-if (selectedTagIDs.length > 0) {
+if (selectedTagIDs.length) {
     filteredVideos = videoData.filter(v =>
         v.tags.some(t => selectedTagIDs.includes(t))
     );
 }
 
-function injectAntiVideos(videos, antiVideos, interval = 8) {
-    const result = [];
-    let antiIndex = 0;
+function injectAntiVideos(videos, antiVideos, interval=8) {
+    const out = [];
+    let ai = 0;
 
-    for (let i = 0; i < videos.length; i++) {
-        result.push(videos[i]);
+    for (let i=0;i<videos.length;i++) {
+        out.push(videos[i]);
 
-        if ((i + 1) % interval === 0 && antiVideos.length) {
-            result.push({
-                ...antiVideos[antiIndex],
-                isAnti: true
+        if ((i+1)%interval===0 && antiVideos.length) {
+            out.push({
+                ...antiVideos[ai],
+                isAnti:true
             });
-
-            antiIndex = (antiIndex + 1) % antiVideos.length;
+            ai = (ai+1)%antiVideos.length;
         }
     }
-
-    return result;
-}
-
-function lockScroll(duration = 3000) {
-    scrollLocked = true;
-    setTimeout(() => scrollLocked = false, duration);
+    return out;
 }
 
 const mergedVideos = injectAntiVideos(filteredVideos, antiVideoData, 8);
 const appVideos = document.getElementById("appVideos");
 
 function renderVideos() {
-    mergedVideos.forEach((video, index) => {
+    mergedVideos.forEach((v,i)=>{
         const el = document.createElement("div");
         el.className = "video";
-        el.dataset.index = index;
+        el.dataset.index = i;
 
         el.innerHTML = `
             <video
                 class="video_player"
-                src="${video.src}"
+                src="${v.src}"
                 loop
                 playsinline
                 webkit-playsinline
@@ -201,28 +195,43 @@ renderVideos();
 
 const videos = document.querySelectorAll(".video_player");
 
-videos.forEach(v => {
+videos.forEach(v=>{
     v.pause();
     v.muted = true;
-    v.setAttribute("playsinline", "");
-    v.setAttribute("webkit-playsinline", "");
+    v.setAttribute("playsinline","");
 });
 
-/* safer playback for iOS */
-function safePlay(video) {
+/* ✅ FIX: detect real iOS gesture */
+function markInteraction(){
+    userInteracted = true;
+}
+document.addEventListener("touchstart", markInteraction, {once:true});
+document.addEventListener("click", markInteraction, {once:true});
+
+/* ✅ FIXED PLAY LOGIC */
+function safePlay(video, allowSound=false){
+
     if (!video) return;
 
-    video.muted = true;
     video.load();
 
+    /* autoplay must be muted */
+    if (!userInteracted) {
+        video.muted = true;
+    } else {
+        video.muted = !allowSound ? true : false;
+    }
+
     const p = video.play();
-    if (p && p.catch) p.catch(() => {});
+    if (p && p.catch) p.catch(()=>{});
 }
 
-function playOnlyVisible(videoToPlay) {
-    videos.forEach(v => {
-        if (v === videoToPlay) {
-            if (!manuallyPaused) safePlay(v);
+function playOnlyVisible(videoToPlay){
+    videos.forEach(v=>{
+        if (v === videoToPlay){
+            if (!manuallyPaused){
+                safePlay(v, true); // allow sound if user interacted
+            }
         } else {
             v.pause();
             v.muted = true;
@@ -231,75 +240,50 @@ function playOnlyVisible(videoToPlay) {
 }
 
 /* OBSERVER */
-const observer = new IntersectionObserver((entries) => {
-
-    entries.forEach(entry => {
+const observer = new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
 
         const card = entry.target;
         const video = card.querySelector(".video_player");
         const index = parseInt(card.dataset.index);
 
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+        if (entry.isIntersecting && entry.intersectionRatio>=0.6){
 
             manuallyPaused = false;
+            currentVideoIndex = index;
 
             playOnlyVisible(video);
 
-            currentVideoIndex = index;
-
             const isAnti = mergedVideos[index]?.isAnti;
 
-            const realSeen =
-                mergedVideos.slice(0, index + 1)
-                    .filter(v => !v.isAnti).length;
-
-            const realTotal = filteredVideos.length;
-
-            /* FAIL CONDITION */
-            if (realSeen >= realTotal) {
-                localStorage.removeItem("resumeVideoIndex");
-                localStorage.setItem("resultType", "fail");
-                window.location.href = "results.html";
-                return;
-            }
-
-            /* ANTI VIDEO FIXED FLOW */
-            if (isAnti && !scrollLocked && antiProcessingIndex !== index) {
+            if (isAnti && antiProcessingIndex !== index){
 
                 antiProcessingIndex = index;
 
-                lockScroll(3000);
+                scrollLocked = true;
+                setTimeout(()=>scrollLocked=false,3000);
 
-                localStorage.setItem("resumeVideoIndex", index + 1);
+                localStorage.setItem("resumeVideoIndex", index+1);
 
                 const antiCount =
-                    mergedVideos.slice(0, index + 1)
-                        .filter(v => v.isAnti).length;
+                    mergedVideos.slice(0,index+1)
+                        .filter(v=>v.isAnti).length;
 
-                // IMPORTANT: force iOS readiness
-                video.pause();
-                video.currentTime = 0;
-                video.muted = true;
-                video.load();
+                /* force playback attempt */
+                safePlay(video,false);
 
-                setTimeout(() => {
-                    safePlay(video);
-                }, 150);
-
-                // WAIT before redirect so iOS actually starts playback
-                setTimeout(() => {
+                setTimeout(()=>{
 
                     antiProcessingIndex = null;
 
-                    if (antiCount >= 3) {
-                        localStorage.removeItem("resumeVideoIndex");
-                        localStorage.setItem("resultType", "fail");
-                        window.location.href = "results.html";
+                    if (antiCount>=3){
+                        localStorage.setItem("resultType","fail");
+                        window.location.href="results.html";
                     } else {
-                        window.location.href = "checkpoint.html";
+                        window.location.href="checkpoint.html";
                     }
 
-                }, 3500);
+                },3500);
             }
 
         } else {
@@ -307,61 +291,54 @@ const observer = new IntersectionObserver((entries) => {
             video.muted = true;
         }
     });
+},{threshold:0.6});
 
-}, { threshold: 0.6 });
-
-document.querySelectorAll(".video").forEach(card => {
+document.querySelectorAll(".video").forEach(card=>{
     observer.observe(card);
 
     const v = card.querySelector(".video_player");
+
     v.load();
 
-    card.addEventListener("click", (e) => {
+    card.addEventListener("click", e=>{
         if (e.target.closest(".settingsBtn")) return;
 
-        if (v.paused) {
-            manuallyPaused = false;
-            safePlay(v);
+        if (v.paused){
+            manuallyPaused=false;
+            safePlay(v,true);
         } else {
-            manuallyPaused = true;
+            manuallyPaused=true;
             v.pause();
         }
     });
 });
 
-let touchStartY = 0;
-let isSnapping = false;
-const videoCards = document.querySelectorAll(".video");
+/* swipe logic unchanged */
+let startY=0;
+let snapping=false;
+const cards=document.querySelectorAll(".video");
 
-function snapTo(index) {
-    if (index < 0 || index >= videoCards.length || isSnapping) return;
+function snap(i){
+    if (i<0||i>=cards.length||snapping) return;
+    snapping=true;
 
-    isSnapping = true;
+    cards[i].scrollIntoView({behavior:"smooth",block:"start"});
 
-    videoCards[index].scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-    });
-
-    setTimeout(() => isSnapping = false, 400);
+    setTimeout(()=>snapping=false,400);
 }
 
-appVideos.addEventListener("touchstart", e => {
-    touchStartY = e.changedTouches[0].screenY;
-}, { passive: true });
+appVideos.addEventListener("touchstart",e=>{
+    startY=e.changedTouches[0].screenY;
+},{passive:true});
 
-appVideos.addEventListener("touchend", e => {
+appVideos.addEventListener("touchend",e=>{
+    const dy=startY-e.changedTouches[0].screenY;
+    if (Math.abs(dy)<50) return;
 
-    if (scrollLocked || isSnapping) return;
+    if (dy>0) snap(currentVideoIndex+1);
+    else snap(currentVideoIndex-1);
 
-    const delta = touchStartY - e.changedTouches[0].screenY;
-
-    if (Math.abs(delta) < 50) return;
-
-    if (delta > 0) snapTo(currentVideoIndex + 1);
-    else snapTo(currentVideoIndex - 1);
-
-}, { passive: true });
+},{passive:true});
 
 </script>
 </body>

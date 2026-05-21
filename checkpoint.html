@@ -33,16 +33,20 @@
 
 <script>
 
-/* checkpoint counter */
-let checkpointCount =
-    parseInt(localStorage.getItem("checkpointCount")) || 0;
+/* CHECKPOINT VISIT TRACKING (FIXED) */
 
-checkpointCount++;
+// get current count
+let checkpointCount = parseInt(localStorage.getItem("checkpointCount")) || 0;
 
-localStorage.setItem(
-    "checkpointCount",
-    checkpointCount
-);
+// prevent double-counting in same session load
+const lastCheckpointVisit = sessionStorage.getItem("lastCheckpointVisit");
+
+// only count if this is a NEW visit in this session
+if (!lastCheckpointVisit) {
+    checkpointCount++;
+    localStorage.setItem("checkpointCount", checkpointCount);
+    sessionStorage.setItem("lastCheckpointVisit", "1");
+}
 
 /* DEBUG: videos viewed */
 const videosViewed =
@@ -81,6 +85,9 @@ document.getElementById("continueBtn").addEventListener("click", () => {
         "| Videos Viewed:",
         videosViewed
     );
+
+    // allow next checkpoint visit to count again
+    sessionStorage.removeItem("lastCheckpointVisit");
 
     window.location.href = "index.html";
 });
